@@ -1,10 +1,8 @@
-## AutoDRY 
+## AutoDRY
 
-AutoDRY (<ul>Auto</ul>phagy <ul>D</ul>ynamics <ul>R</ul>pository <ul>Y</ul>east) 
-is a web portal that provides access to data from a study on genome-wide autophagy 
+AutoDRY - <u>**Auto**</u>phagy <u>**D**</u>ynamics <u>**R**</u>epository <u>**Y**</u>east - is a web portal that provides access to data from a study on genome-wide autophagy
 dynamics in yeast.
 
-### What is AutoDRY?
 
 The autophagy profiles of individual genes or groups of genes can be
 explored in the context of genome-wide patterns. Both nutrient response
