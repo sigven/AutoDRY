@@ -112,7 +112,7 @@ DE_response_ui[['multiple']][['full']] <-
         shiny::checkboxInput(
           "use_perturbation_data", "Use normalized values", value = F),
         shiny::checkboxInput(
-          "contour", "Add contour plot", value = F)),
+          "contour", "Show contour plots", value = F)),
       DE_response_ui[['multiple']][['main_panel']]
     )
   )
@@ -161,7 +161,7 @@ DE_competence_ui[['multiple']][['full']] <-
         shiny::checkboxInput(
           "bf_library_adjustment", "Perform library correction", value = F),
         shiny::checkboxInput(
-          "bf_contour", "Add contour plot", value = F)
+          "bf_contour", "Show contour plots", value = F)
       ),
       DE_competence_ui[['multiple']][['main_panel']]
     )
