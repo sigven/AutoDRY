@@ -202,11 +202,6 @@ plot_autophagy_competence_multi <- function(
     paste(mat$Gene, mat$ORF),paste(
       type_data$Gene,
       type_data$ORF))]
-  
-  # mat$Type <- competence_data[['dnn_preds']]$Type[match(
-  #   paste(mat$Gene, mat$ORF),paste(
-  #     competence_data[['dnn_preds']]$Gene,
-  #     competence_data[['dnn_preds']]$ORF))]
 
   if(library_adjustment == TRUE){
     ## 1) We standardize the distributions of KO, DAmP and WT populations
@@ -491,11 +486,6 @@ plot_response_kinetics_multi <- function(
     paste(mat$Gene, mat$ORF),paste(
       type_data$Gene,
       type_data$ORF))]
-  
-  # mat$Type <- response_data[['dnn_preds']]$Type[match(paste(
-  #   mat$Gene, mat$ORF),paste(
-  #     response_data[['dnn_preds']]$Gene,
-  #     response_data[['dnn_preds']]$ORF))]
 
   p <- ggplot2::ggplot(
     mat, ggplot2::aes(
