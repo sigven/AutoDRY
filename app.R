@@ -172,8 +172,8 @@ DE_competence_ui[['multiple']][['full']] <-
 paper_info <- paste0(
   "<h5><b><p style=text-align:justify;'>",
   "<a href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v1' ",
-  "target='_blank'>Genome-wide profiling of the hierarchical control of autophagy ",
-  "dynamics using deep learning (bioRxiv, 2024)</a></p></b></h5>",
+  "target='_blank'>Time-resolved functional genomics using deep learning ",
+  "reveals a global hierarchical control of autophagy (bioRxiv, 2024)</a></p></b></h5>",
   "<h6><p style='text-align:justify;'>",
   htmltools::includeText("data/section_content/authors.md"),
   "</p></h6>",
@@ -181,7 +181,7 @@ paper_info <- paste0(
   "or <i>j.m.enserink@ibv.uio.no</i></h6></p>")
 
 synopsis <- paste0(
-  "<h5><b><p style='color:#593196;text-align:justify;'>",
+  "<h5><b><p style='color:$primary;text-align:justify;'>",
   htmltools::includeText("data/section_content/synopsis_I.md"),
   "</p></b></h5>",
   "<h6><p style='text-align:justify;'>",
@@ -189,7 +189,7 @@ synopsis <- paste0(
   "</p></h6>")
 
 what_is_autodry <- paste0(
-  "<h5><b><p style='color:#593196;text-align:justify;'>",
+  "<h5><b><p style='color:$primary;text-align:justify;'>",
   htmltools::includeText("data/section_content/what_is_autodry_I.md"),
   "</p></b></h5>",
   "<h6><p style='text-align:justify;'>",
@@ -210,6 +210,12 @@ disclaimer_text <- paste0(
   "<p style='text-align:justify;'>",
   htmltools::includeText("data/section_content/disclaimer.md"),
   "</p>")
+
+documentation_text <- paste0(
+  "<p style='text-align:justify;'>",
+  htmltools::includeText("data/section_content/documentation.md"),
+  "</p>")
+
 
 autodry_footer <-
   bslib::card_footer(
@@ -276,15 +282,29 @@ about_page <-
     )
   )
 
-downloads_page <-
+
+docs_page <- 
   bslib::page_fillable(
+    tags$style(HTML(".card {border-radius: 0.9rem;}")),
+    tags$style(HTML(".card2 {border-radius: 0rem}")),
     bslib::card(
-      #class = "bg-dark",
+      class = "card2",
       full_screen = F,
-      #bslib::card_header("About", class = "bg-primary text-white"),
+      fillable = F,
+      fill = F,
       bslib::card_body(
-        shiny::markdown("Documentation will be available here.")
-      )
+        bslib::layout_column_wrap(
+          width = NULL,
+          fill = T,
+          bslib::card(
+            bslib::card_header(class = "bg-dark","  Documentation"),
+            bslib::card_body(
+              shiny::markdown(documentation_text)
+            )
+          )
+        )
+      ),
+      autodry_footer
     )
   )
 
@@ -320,17 +340,27 @@ ui <- bslib::page_navbar(
     shiny::includeHTML("google_analytics.html"),
     tags$link(rel="shortcut icon", href="favicon-ous.svg")),
   fillable_mobile = TRUE,
-  theme = bslib::bs_theme(
-    bootswatch = "pulse") |>
+  theme = bslib::bs_theme(bootswatch = "pulse", version=5, "dropdown-menu-bg" = "#fff") |>
     bslib::bs_add_rules(
       list(
-        ".navbar {padding-left: 10px; padding-right: 20px;}",
-        ".nav.navbar-nav {font-size:1.2em;}",
+        ".navbar {padding-left: 20px; padding-right: 20px;}",
+        ".nav.navbar-nav {font-size:1.2em; background-color: $primary !important; color: #ffffff !important;}",
+        ".navbar-nav .dropdown-menu .dropdown-item {
+          background-color: #fff; color: #000; /* Change to your desired color */
+        }",
+        " .dropdown-menu::before, .dropdown-menu::after {
+            background-color: #fff !important; color: #fff !important;
+            border: none !important;
+        }",
+        ".navbar-nav .dropdown-menu .dropdown-item:hover {
+          background-color: $primary; color: #fff;/* Hover effect color */
+        }",
         ".navbar.navbar-default {
           background-color: $primary !important;
         }"
       )
     ),
+  bg = "#593196",
   window_title = "AutoDRY",
   title = htmltools::span(
     "AutoDRY: Autophagy Dynamics Repository Yeast",
@@ -348,7 +378,7 @@ ui <- bslib::page_navbar(
     bslib::nav_panel("Autophagy competence - global",
                      DE_competence_ui[['multiple']][['full']]),
   ),
-  bslib::nav_panel("Documentation", downloads_page),
+  bslib::nav_panel("Documentation", docs_page),
   bslib::nav_panel(htmltools::span(
     "DISCLAIMER", style="padding-right:10px;"), disclaimer_page)
 )
