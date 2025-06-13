@@ -65,8 +65,7 @@ load_kinetic_response_data <- function(){
   #   file.path(here::here(), "data","processed","dnn_preds.fst"))
   df_DS_parms_comb <- dplyr::bind_rows(
     df_DS_parms,df_DS_parms_ctrs)
-
-
+  
   return(list(
     ds_curvefits = df_DS_curvefits,
     ds_parms = df_DS_parms,
@@ -78,6 +77,27 @@ load_kinetic_response_data <- function(){
     gene_info_kinetic_multi = gene_info_kinetic_multi
   ))
 
+}
+
+load_main_gene_ids <- function(){
+  main_gene_ids <- readRDS(
+    file.path(here::here(), "data","processed","main_gene_ids.rds"))
+  
+  return(main_gene_ids)
+}
+
+load_arkin_matrices <- function(){
+  arkin_matrices <- list()
+  
+  arkin_matrices[['raw']] <- fst::read_fst(
+    file.path(here::here(), 
+              "data","processed","all_arkin_matrices_Value.fst"))
+  
+  arkin_matrices[['norm']] <- fst::read_fst(
+    file.path(here::here(), 
+              "data","processed","all_arkin_matrices_Perturbation.fst"))
+  
+  return(arkin_matrices)
 }
 
 load_type_data <- function(){
@@ -111,217 +131,6 @@ load_autophagy_competence_data <- function(){
 
 }
 
-plot_autophagy_competence_multi <- function(
-    competence_data = NULL,
-    type_data = NULL,
-    primary_identifiers = NULL,
-    library_adjustment = FALSE,
-    show_library_type_contour = FALSE,
-    user_x = "Autophagosome formation",
-    user_y = "Autophagosome clearance"){
-
-
-  variables <- colnames(
-    competence_data[['bf_overall']])[5:7]
-
-  #Select x and y
-  X <- variables[1]
-  Y <- variables[1]
-
-  if(user_x == "Autophagosome formation"){
-    X <- variables[3]
-  }
-  if(user_y == "Autophagosome formation"){
-    Y <- variables[3]
-  }
-  if(user_x == "Autophagosome clearance"){
-    X <- variables[2]
-  }
-  if(user_y == "Autophagosome clearance"){
-    Y <- variables[2]
-  }
-
-  lab_x <- ""
-  lab_y <- ""
-  if(grepl("VAM6.ATG1", X, fixed = T)){
-    lab_x <- paste0("<br><b>Autophagosome formation</b><br><br>",
-                    "<i>log BF (VAM6:ATG1)</i>")
-  }else if(grepl("WT.ATG1", X, fixed = T)){
-    lab_x <- paste0("<br><b>Overall autophagy</b><br><br>",
-                    "<i>log BF (WT:ATG1)</i>")
-  }else{
-    lab_x <- paste0("<br><b>Autophagosome clearance</b><br><br>",
-                    "<i>log BF (WT:VAM6)</i>")
-  }
-  if(grepl("VAM6.ATG1", Y, fixed = T)){
-    lab_y <- paste0("<b>Autophagosome formation</b><br><br>",
-                    "<i>log BF (VAM6:ATG1)</i><br>")
-
-  }else if(grepl("WT.ATG1", Y, fixed = T)){
-    lab_y <- paste0("<b>Overall autophagy</b><br><br>",
-                    "<i>log BF (WT:ATG1)</i><br>")
-  }else{
-    lab_y <- paste0("<b>Autophagosome clearance</b><br><br>",
-                    "<i>log BF (WT:VAM6)</i><br>")
-  }
-
-  Positions <- c()
-  for(i in primary_identifiers){
-    BF_response <- competence_data[['bf_temporal']] |>
-      dplyr::filter(primary_identifier == i)
-    #If mutant in rec plate, only evaluate rec mutants
-    if(any(grepl("Rec",BF_response$Plate))){
-      BF_response <- BF_response[which(grepl("Rec",BF_response$Plate)),]
-    }
-    #Find representative response
-    BF_response <- BF_response |>
-      dplyr::group_by(TimeR) |>
-      dplyr::mutate(d=abs(log_BFt_WT.ATG1-median(log_BFt_WT.ATG1))+
-               abs(log_BFt_WT.VAM6-median(log_BFt_WT.VAM6))+
-               abs(log_BFt_VAM6.ATG1-median(log_BFt_VAM6.ATG1))) |>
-      dplyr::group_by(Plate, Position) |>
-      dplyr::mutate(
-        d = mean(d),
-        NCells = mean(NCells))
-    BF_response <-
-      BF_response[which(BF_response$d==min(BF_response$d)),]
-    BF_response <-
-      BF_response[which(BF_response$NCells==max(BF_response$NCells)),]
-    Positions <-
-      c(Positions,paste(BF_response$Plate, BF_response$Position)[1])
-  }
-
-
-  mat <- competence_data[['bf_overall']] |>
-    as.data.frame()
-  mat_select <- competence_data[['bf_overall']] |>
-    subset(paste(Plate, Position) %in% Positions) |>
-    as.data.frame()
-
-  mat$Type <- type_data$Type[match(
-    paste(mat$Gene, mat$ORF),paste(
-      type_data$Gene,
-      type_data$ORF))]
-
-  if(library_adjustment == TRUE){
-    ## 1) We standardize the distributions of KO, DAmP and WT populations
-    ##    to have equal mean and variance.
-    ## 2) We cannot assume that the variance is the same for WT and
-    ##    mutant distributions so we ensure that the sd is unchanged.
-
-    mat_lib <- mat[is.na(mat$Plate_controls),] |>
-      dplyr::mutate(
-        mean_x = mean(!!rlang::sym(X), na.rm = T),
-        mean_y = mean(!!rlang::sym(Y), na.rm = T),
-        sd_x = sd(!!rlang::sym(X), na.rm = T),
-        sd_y = sd(!!rlang::sym(Y), na.rm = T)) |>
-      dplyr::group_by(Type) %>%
-      dplyr::summarise(
-        mean_type_x = mean(!!rlang::sym(X), na.rm = T),
-        mean_type_y = mean(!!rlang::sym(Y), na.rm = T),
-        sd_type_x = sd(!!rlang::sym(X), na.rm = T),
-        sd_type_y = sd(!!rlang::sym(Y), na.rm = T),
-        mean_x = mean(mean_x, na.rm = T),
-        mean_y = mean(mean_y, na.rm = T),
-        sd_x = mean(sd_x, na.rm = T),
-        sd_y = mean(sd_y, na.rm = T))
-
-    mat$Type[which(mat$Plate_controls == "+")] <-
-      "KO"
-    mat$Type[which(mat$Plate_controls == "+" & is.na(mat$ORF))] <-
-      "WT"
-
-    mat_wt <- mat[which(mat$Plate_controls == "+" & is.na(mat$ORF)),] |>
-      dplyr::mutate(
-        mean_x = mean(!!rlang::sym(X)),
-        mean_y = mean(!!rlang::sym(Y)),
-        sd_x = sd(!!rlang::sym(X)),
-        sd_y = sd(!!rlang::sym(Y))) |>
-      dplyr::group_by(Type) |>
-      dplyr::summarise(
-        mean_type_x = mean(!!rlang::sym(X), na.rm = T),
-        mean_type_y = mean(!!rlang::sym(Y), na.rm = T),
-        sd_type_x = sd(!!rlang::sym(X), na.rm = T),
-        sd_type_y = sd(!!rlang::sym(Y), na.rm = T),
-        mean_x = mean(mean_x, na.rm = T),
-        mean_y = mean(mean_y, na.rm = T),
-        sd_x = mean(sd_x, na.rm = T),
-        sd_y = mean(sd_y, na.rm = T))
-    #set global target distribution mean and SD for WT
-    mat_wt[,6:9] <- mat_lib[1,6:9]
-    #keep SD unchanged for the WT, i.e. only change mean
-    mat_wt[1,4:5] <- mat_wt[1,8:9]
-    mat_lib <- rbind(mat_lib, mat_wt)
-
-    mat[,X] <-  mat[,X] +
-      (mat_lib$mean_x-mat_lib$mean_type_x)[match(mat$Type,mat_lib$Type)]
-    mat[,Y] <- mat[,Y] +
-      (mat_lib$mean_y-mat_lib$mean_type_y)[match(mat$Type,mat_lib$Type)]
-    mat[,X] <- mat[,X] *
-      ((mat_lib$sd_x/mat_lib$sd_type_x)[match(mat$Type,mat_lib$Type)])
-    mat[,Y] <- mat[,Y] *
-      ((mat_lib$sd_y/mat_lib$sd_type_y)[match(mat$Type,mat_lib$Type)])
-  }
-
-  mat$X <- mat[,X]
-  mat$Y <- mat[,Y]
-  mat_select$X <- mat_select[,X]
-  mat_select$Y <- mat_select[,Y]
-
-  mat_select <- mat_select |>
-    dplyr::mutate(Gene = dplyr::if_else(
-      is.na(Plate_controls) &
-        is.na(Gene),
-      as.character(ORF),
-      as.character(Gene)
-    ))
-
-  p <- ggplot2::ggplot(mat[is.na(mat$Plate_controls),], ggplot2::aes(X, Y)) +
-    ggplot2::geom_point(col="lightgray", size=0.9, pch=16, alpha=0.8) +
-    ggplot2::stat_density_2d(data=mat[which(mat$Plate_controls=="+"),] |>
-                               dplyr::mutate(Gene = ifelse(
-                                 is.na(Gene) | Gene == "WT", "WT/Control", Gene)),
-                             ggplot2::aes(fill=Gene, group=Gene, alpha = ..level..),
-                             geom = "polygon", col=NA) +
-    ggplot2::geom_point(
-      data=mat[which(!is.na(mat$Reference_sets) & !grepl("ORF",mat$Reference_sets)),],
-      ggplot2::aes(col=Reference_sets), size=1.3) +
-    ggplot2::geom_point(data=mat_select, ggplot2::aes(), pch=21) +
-    ggrepel::geom_text_repel(data=mat_select, ggplot2::aes(label=Gene),
-                             force=2, size=5,
-                             max.overlaps = Inf,
-                             min.segment.length = 0,
-                             segment.size = 0.3) +
-    ggplot2::labs(
-      x = lab_x,
-      y = lab_y,
-      color="Reference sets", linetype="Library")+
-    ggsci::scale_fill_jama() +
-    ggsci::scale_color_d3() +
-    ggplot2::scale_linetype_manual(values=c(2,1)) +
-    ggplot2::theme_bw() +
-    ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
-          panel.grid.minor = ggplot2::element_blank(),
-          legend.position = "top",
-          plot.margin = ggplot2::margin(2, 1, 2, 1, "cm"),
-          legend.text = ggplot2::element_text(size=18),
-          legend.title = ggplot2::element_blank(),
-          axis.title.y = ggtext::element_markdown(size=18),
-          axis.title.x = ggtext::element_markdown(size=18),
-          axis.text = ggplot2::element_text(size=18)) +
-    ggplot2::guides(alpha = FALSE)
-
-  if(show_library_type_contour == T){
-    p <- p + ggplot2::stat_density_2d(
-      data = mat[is.na(mat$Plate_controls),],
-      ggplot2::aes(lty=Type), col="grey30", alpha=1) +
-      ggplot2::scale_linetype_manual(values=c("KO" = 1, "DAmP" = 2))
-  }
-
-  return(p)
-
-}
-
 
 plot_autophagy_competence <- function(competence_data = NULL){
 
@@ -347,7 +156,8 @@ plot_autophagy_competence <- function(competence_data = NULL){
       data=competence_data$BF_response_ctr,
       ggplot2::aes(
         size=log_BFt_WT.ATG1, pch="Control"),size=1.8, alpha = 1) +
-    ggplot2::geom_path(ggplot2::aes(),col="black",lty=2, alpha = 1) +
+    ggplot2::geom_path(
+      ggplot2::aes(),col="black",lty=2, alpha = 1) +
     ggplot2::geom_segment(ggplot2::aes(
       xend = log_BFt_VAM6.ATG1.shift,
       yend = log_BFt_WT.VAM6.shift,
@@ -364,13 +174,14 @@ plot_autophagy_competence <- function(competence_data = NULL){
       col="Time",
       size="BF (WT:ATG1)",
       shape="") +
-    ggplot2::theme_bw(base_size = 20, base_family = "Helvetica") +
+    ggplot2::theme_bw(
+      base_size = 20, base_family = "Helvetica") +
     ggplot2::theme(
       panel.grid.major = ggplot2::element_blank(),
       panel.grid.minor = ggplot2::element_blank(),
       plot.title = ggplot2::element_blank(),
       axis.text = ggplot2::element_text(size=18),
-      plot.margin = ggplot2::margin(2, 1, 1, 1, "cm"),
+      plot.margin = ggplot2::margin(2, 1, 2, 1, "cm"),
       axis.title.y = ggtext::element_markdown(size = 18),
       axis.title.x = ggtext::element_markdown(size = 18),
       legend.text = ggplot2::element_text(size=18, family = "Helvetica"),
@@ -382,158 +193,7 @@ plot_autophagy_competence <- function(competence_data = NULL){
 
 }
 
-plot_response_kinetics_multi <- function(
-    response_data = NULL,
-    type_data = NULL,
-    primary_identifiers = NULL,
-    custom_scale_limits = TRUE,
-    user_x = "T50 +N",
-    user_y = "T50 -N",
-    use_perturbation_data = FALSE,
-    show_library_type_contour = FALSE){
 
-
-  Value = "Value"
-  if(use_perturbation_data == TRUE){
-    Value = "Perturbation"
-  }
-
-  # Kinetic parameters
-  #Select x and y
-  X <- user_x
-  Y <- user_y
-
-  Positions <- c()
-  for(i in primary_identifiers){
-    y_pred <- response_data[['ds_curvefits']] |>
-      dplyr::filter(primary_identifier == i)
-
-    #If mutant in rec plate, only evaluate rec mutants
-    if(any(grepl("Rec",y_pred$Plate))){
-      y_pred <- y_pred[which(grepl("Rec",y_pred$Plate)),]
-    }
-    y_pred <- y_pred |>
-      dplyr::group_by(Time) |>
-      dplyr::mutate(d=abs(P1_30_fit-median(P1_30_fit))) |>
-      dplyr::group_by(Plate, Position) |>
-      dplyr::mutate(d=mean(d))
-    y_pred <- y_pred[which(y_pred$d==min(y_pred$d)),]
-    Positions <- c(
-      Positions,paste(y_pred$Plate, y_pred$Position)[1])
-  }
-
-  mat <- reshape2::dcast(response_data[['ds_parms']][which(
-    response_data[['ds_parms']]$Parameter %in% c(X,Y)),],
-               Plate+Position+ORF+Gene+primary_identifier+Reference_sets~Parameter,
-               value.var = Value)
-  mat$X <- mat[,X]
-  mat$Y <- mat[,Y]
-
-  mat_select <- NULL
-  if(length(Positions) > 0 & !is.null(primary_identifiers)){
-    mat_select <- dcast(response_data[['ds_parms_comb']][which(
-      response_data[['ds_parms_comb']]$Parameter %in% c(X,Y)),] |>
-        subset(paste(Plate, Position) %in% Positions),
-      Plate+Position+ORF+Gene + Reference_sets+Plate_controls~Parameter,
-      value.var = Value)
-    mat_select$X <- mat_select[,X]
-    mat_select$Y <- mat_select[,Y]
-  }
-
-  #Filter, replace manual control of scale?
-  if(custom_scale_limits == TRUE){
-    x_lower_bound <- as.numeric(stats::quantile(mat$X, 1-0.99, na.rm = T)) -
-      5 * IQR(mat$X, na.rm = T)
-    x_upper_bound <- as.numeric(stats::quantile(mat$X, 0.99, na.rm = T)) +
-      5 * IQR(mat$X, na.rm = T)
-    y_lower_bound <- as.numeric(stats::quantile(mat$Y, 1-0.99, na.rm = T)) -
-      5 * IQR(mat$Y, na.rm = T)
-    y_upper_bound <- as.numeric(stats::quantile(mat$Y, 0.99, na.rm = T)) +
-      5 * IQR(mat$Y, na.rm = T)
-  }else{
-    x_lower_bound <- min(mat$X, na.rm = T)
-    x_upper_bound <- max(mat$X, na.rm = T)
-    y_lower_bound <- min(mat$Y, na.rm = T)
-    y_upper_bound <- max(mat$Y, na.rm = T)
-  }
-
-  mat$X[mat$X < x_lower_bound] <- x_lower_bound
-  mat$X[mat$X > x_upper_bound] <- x_upper_bound
-  mat$Y[mat$Y < y_lower_bound] <- y_lower_bound
-  mat$Y[mat$Y > y_upper_bound] <- y_upper_bound
-  if(!is.null(mat_select)){
-    mat_select$X[mat_select$X < x_lower_bound] <- x_lower_bound
-    mat_select$X[mat_select$X > x_upper_bound] <- x_upper_bound
-    mat_select$Y[mat_select$Y < y_lower_bound] <- y_lower_bound
-    mat_select$Y[mat_select$Y > y_upper_bound] <- y_upper_bound
-
-    mat_select <- mat_select |>
-      dplyr::mutate(Gene = dplyr::if_else(
-        is.na(Plate_controls) &
-          is.na(Gene),
-        as.character(ORF),
-        as.character(Gene)
-      ))
-  }
-
-  ## Increase bounds in plot to show labels of outliers
-  x_lower_bound <- x_lower_bound - 0.05 * abs(x_lower_bound)
-  x_upper_bound <- x_upper_bound + 0.05 * abs(x_upper_bound)
-  y_lower_bound <- y_lower_bound - 0.05 * abs(y_lower_bound)
-  y_upper_bound <- y_upper_bound + 0.05 * abs(y_upper_bound)
-
-  mat$Type <- type_data$Type[match(
-    paste(mat$Gene, mat$ORF),paste(
-      type_data$Gene,
-      type_data$ORF))]
-
-  p <- ggplot2::ggplot(
-    mat, ggplot2::aes(
-      X, Y)) +
-    ggplot2::geom_point(
-      col="lightgray", size=1.4, pch=19, alpha=0.8)+
-    ggplot2::geom_point(
-      data=mat[which(!is.na(mat$Reference_sets)),],
-      ggplot2::aes(col=Reference_sets), size=1.5)+
-    ggplot2::labs(x=X, y=Y) +
-    ggsci::scale_fill_jama() +
-    ggsci::scale_color_d3() +
-    ggplot2::theme_bw(base_size = 18, base_family = "Helvetica") +
-    ggplot2::theme(
-      axis.title = ggplot2::element_text(size=18),
-      axis.text = ggplot2::element_text(size=18),
-      legend.text = ggplot2::element_text(size=18),
-      plot.margin = ggplot2::margin(1, 1, 1, 1, "cm"),
-      legend.position = "top",
-      legend.title = ggplot2::element_blank(),
-      panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank())
-  if(!is.null(mat_select)){
-    p <- p +
-      ggplot2::geom_point(
-        data=mat_select, ggplot2::aes(), pch=21)+
-      ggrepel::geom_text_repel(
-        data=mat_select,
-        ggplot2::aes(label=Gene),
-        force=2, size=5.5,
-        nudge_x = 0.3, nudge_y = 0.3,
-        max.overlaps = Inf,
-        min.segment.length = 0,
-        segment.size = 0.9)
-
-  }
-
-  if(show_library_type_contour == T){
-    p <- p + ggplot2::stat_density_2d(
-      data=mat[,],
-      ggplot2::aes(lty=Type), col="grey30", alpha=1) +
-      ggplot2::scale_linetype_manual(values=c("KO" = 1, "DAmP" = 2))
-  }
-
-  return(p)
-
-
-}
 plot_response_kinetics <- function(response_data = NULL){
 
   y_pred <- NULL
@@ -564,6 +224,9 @@ plot_response_kinetics <- function(response_data = NULL){
       id <- response_data$id
     }
   }
+  
+  # Example plot logic (replace with your own)
+  #return(hist(rnorm(100), main = paste("Plot for", id)))
 
   alpha_ribbon <- 0.1
   alpha_segment <- 1
@@ -673,7 +336,7 @@ plot_response_kinetics <- function(response_data = NULL){
       plot.title = ggplot2::element_text(size=20, face="bold"),
       axis.title = ggplot2::element_text(size=18),
       axis.text = ggplot2::element_text(size=18),
-      plot.margin = ggplot2::margin(1, 1, 1, 2, "cm"),
+      plot.margin = ggplot2::margin(2, 1, 2, 1, "cm"),
       legend.text = ggplot2::element_text(size=18),
       legend.title = ggplot2::element_blank()
     )
@@ -681,28 +344,197 @@ plot_response_kinetics <- function(response_data = NULL){
   return(p)
 }
 
-get_kinetic_response_params <- function(){
 
-  params <-
-    c("Perturbation -N",
-      "Perturbation +N",
-      "Perturbation overall",
-      "Slope (sigmoid) -N",
-      "Slope (sigmoid) +N",
-      "Slope (tangent) -N",
-      "Slope (tangent) +N",
-      "Autophagy start",
-      "Autophagy max",
-      "Autophagy final",
-      "T50 -N",
-      "T50 +N",
-      "T lag -N",
-      "T lag +N",
-      "T final -N",
-      "T final +N",
-      "Dynamic range -N",
-      "Dynamic range +N")
-  return(params)
+plot_autophagy_competence_global <- function(
+    ac_multi_data = NULL,
+    show_library_type_contour = FALSE){
+ 
+  ac_multi_data[['mat']]$X <- 
+    ac_multi_data[['mat']][,ac_multi_data[['X']]]
+  ac_multi_data[['mat']]$Y <- 
+    ac_multi_data[['mat']][,ac_multi_data[['Y']]]
+  
+  if(NROW(ac_multi_data[['mat_select']]) > 0){
+    ac_multi_data[['mat_select']]$X <- 
+      ac_multi_data[['mat_select']][,ac_multi_data[['X']]]
+    ac_multi_data[['mat_select']]$Y <- 
+      ac_multi_data[['mat_select']][,ac_multi_data[['Y']]]
+    
+    ac_multi_data[['mat_select']] <- ac_multi_data[['mat_select']] |>
+      dplyr::mutate(Gene = dplyr::if_else(
+        is.na(Plate_controls) &
+          is.na(Gene),
+        as.character(ORF),
+        as.character(Gene)
+      ))
+  }
+  
+  p <- ggplot2::ggplot(
+    ac_multi_data$mat[is.na(ac_multi_data$mat$Plate_controls),], ggplot2::aes(X, Y)) +
+    ggplot2::geom_point(
+      col="lightgray", size=0.9, pch=16, alpha=0.8) +
+    ggplot2::stat_density_2d(
+      data=ac_multi_data$mat[which(ac_multi_data$mat$Plate_controls=="+"),] |>
+                               dplyr::mutate(Gene = ifelse(
+                                 is.na(Gene) | Gene == "WT", "WT/Control", Gene)),
+                             ggplot2::aes(fill=Gene, group=Gene, alpha = ..level..),
+                             geom = "polygon", col=NA) +
+    ggplot2::geom_point(
+      data=ac_multi_data$mat[which(!is.na(ac_multi_data$mat$Reference_sets) & 
+                                     !grepl("ORF",ac_multi_data$mat$Reference_sets)),],
+      ggplot2::aes(col=Reference_sets), size=1.3) +
+    ggplot2::labs(
+      x = ac_multi_data$lab_x,
+      y = ac_multi_data$lab_y,
+      color="Reference sets", linetype="Library")+
+    ggsci::scale_fill_jama() +
+    ggsci::scale_color_d3() +
+    ggplot2::scale_linetype_manual(values=c(2,1)) +
+    ggplot2::theme_bw() +
+    ggplot2::theme(panel.grid.major = ggplot2::element_blank(),
+                   panel.grid.minor = ggplot2::element_blank(),
+                   legend.position = "top",
+                   plot.margin = ggplot2::margin(2, 1, 2, 1, "cm"),
+                   legend.text = ggplot2::element_text(size=18),
+                   legend.title = ggplot2::element_blank(),
+                   axis.title.y = ggtext::element_markdown(size=18),
+                   axis.title.x = ggtext::element_markdown(size=18),
+                   axis.text = ggplot2::element_text(size=18)) +
+    ggplot2::guides(alpha = FALSE)
+  
+  if(NROW(ac_multi_data$mat_select) > 0){
+    p <- p +
+      ggplot2::geom_point(
+        data=ac_multi_data$mat_select, ggplot2::aes(), pch=21) +
+      ggrepel::geom_text_repel(
+        data=ac_multi_data$mat_select, ggplot2::aes(label=Gene),
+        force=2, size=5,
+        nudge_x = 0.3, nudge_y = 0.3,
+        max.overlaps = Inf,
+        min.segment.length = 0,
+        segment.size = 0.9)
+  }
+  
+  if(show_library_type_contour == T){
+    p <- p + ggplot2::stat_density_2d(
+      data = ac_multi_data$mat[is.na(ac_multi_data$mat$Plate_controls),],
+      ggplot2::aes(lty=Type), col="grey30", alpha=1) +
+      ggplot2::scale_linetype_manual(values=c("KO" = 1, "DAmP" = 2))
+  }
+  
+  return(p)
+  
+}
 
+
+plot_response_kinetics_global <- function(
+    mat = NULL,
+    mat_select = NULL,
+    X = NULL,
+    Y = NULL,
+    #arkin_state_data = NULL,
+    custom_scale_limits = TRUE,
+    show_library_type_contour = FALSE){
+  
+  #mat <- arkin_state_data[['mat']]
+  #mat_select <- arkin_state_data[['mat_select']]
+
+  #Filter, replace manual control of scale?
+  if(custom_scale_limits == TRUE){
+    x_lower_bound <- as.numeric(
+      stats::quantile(mat$X, 1-0.99, na.rm = T)) -
+      5 * stats::IQR(mat$X, na.rm = T)
+    x_upper_bound <- as.numeric(
+      stats::quantile(mat$X, 0.99, na.rm = T)) +
+      5 * stats::IQR(mat$X, na.rm = T)
+    y_lower_bound <- as.numeric(
+      stats::quantile(mat$Y, 1-0.99, na.rm = T)) -
+      5 * stats::IQR(mat$Y, na.rm = T)
+    y_upper_bound <- as.numeric(
+      stats::quantile(mat$Y, 0.99, na.rm = T)) +
+      5 * stats::IQR(mat$Y, na.rm = T)
+  }else{
+    x_lower_bound <- min(mat$X, na.rm = T)
+    x_upper_bound <- max(mat$X, na.rm = T)
+    y_lower_bound <- min(mat$Y, na.rm = T)
+    y_upper_bound <- max(mat$Y, na.rm = T)
+  }
+  
+  mat$X[mat$X < x_lower_bound] <- x_lower_bound
+  mat$X[mat$X > x_upper_bound] <- x_upper_bound
+  mat$Y[mat$Y < y_lower_bound] <- y_lower_bound
+  mat$Y[mat$Y > y_upper_bound] <- y_upper_bound
+  if(!is.null(mat_select) & NROW(mat_select) > 0){
+    mat_select$X[mat_select$X < x_lower_bound] <- x_lower_bound
+    mat_select$X[mat_select$X > x_upper_bound] <- x_upper_bound
+    mat_select$Y[mat_select$Y < y_lower_bound] <- y_lower_bound
+    mat_select$Y[mat_select$Y > y_upper_bound] <- y_upper_bound
+    
+    mat_select <- mat_select |>
+      dplyr::mutate(Gene = dplyr::if_else(
+        is.na(Plate_controls) &
+          is.na(Gene),
+        as.character(ORF),
+        as.character(Gene)
+      ))
+  }
+  
+  ## Increase bounds in plot to show labels of outliers
+  x_lower_bound <- x_lower_bound - 0.05 * abs(x_lower_bound)
+  x_upper_bound <- x_upper_bound + 0.05 * abs(x_upper_bound)
+  y_lower_bound <- y_lower_bound - 0.05 * abs(y_lower_bound)
+  y_upper_bound <- y_upper_bound + 0.05 * abs(y_upper_bound)
+  
+  
+  p <- ggplot2::ggplot(
+    mat, ggplot2::aes(
+      X, Y)) +
+    ggplot2::geom_point(
+      col="lightgray", size=1.4, pch=19, alpha=0.8)+
+    ggplot2::geom_point(
+      data=mat[which(!is.na(mat$Reference_sets)),],
+      ggplot2::aes(col = Reference_sets), size=1.5)+
+    ggplot2::labs(x = X, 
+                  y = Y) +
+    ggplot2::xlim(x_lower_bound, x_upper_bound) +
+    ggplot2::ylim(y_lower_bound, y_upper_bound) +
+    ggsci::scale_fill_jama() +
+    ggsci::scale_color_d3() +
+    ggplot2::theme_bw(base_size = 18, base_family = "Helvetica") +
+    ggplot2::theme(
+      axis.title = ggplot2::element_text(size=18),
+      axis.text = ggplot2::element_text(size=18),
+      legend.text = ggplot2::element_text(size=18),
+      plot.margin = ggplot2::margin(1, 1, 1, 1, "cm"),
+      legend.position = "top",
+      legend.title = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank())
+  
+  if(!is.null(mat_select) & NROW(mat_select) > 0){
+    p <- p +
+      ggplot2::geom_point(
+        data=mat_select, ggplot2::aes(), pch=21)+
+      ggrepel::geom_text_repel(
+        data=mat_select,
+        ggplot2::aes(label=Gene),
+        force=2, size=5.5,
+        nudge_x = 0.3, nudge_y = 0.3,
+        max.overlaps = Inf,
+        min.segment.length = 0,
+        segment.size = 0.9)
+    
+  }
+  
+  if(show_library_type_contour == T){
+    p <- p + ggplot2::stat_density_2d(
+      data=mat[,],
+      ggplot2::aes(lty=Type), col="grey30", alpha=1) +
+      ggplot2::scale_linetype_manual(values=c("KO" = 1, "DAmP" = 2))
+  }
+  
+  return(p)
+  
+  
 }
 

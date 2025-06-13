@@ -16,4 +16,4 @@ The use of this data implies acknowledgment and acceptance of these terms. If yo
 Use of the AutoDRY repository should be properly acknowledged. Any publications or presentations resulting from the use of this data should cite the appropriate original works and datasets as specified by the authors.
 
 <h6><b>Citation</b></h6>
-<span>Chica et al., bioRxiv (2024). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://doi.org/10.1101/2024.04.06.588104' target='_blank'>doi: 10.1101/2024.04.06.588104</a></span>
+<span>Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a></span>

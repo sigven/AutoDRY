@@ -108,13 +108,13 @@ Across both analysis types, users can adjust several display settings:
 
 #### Example 1: Detailed Kinetic Profile of a Single Mutant
 
-1.  Use the menu bar to navigate to the Response Kinetic Analysis module ( *Data Explorer* **&gt;&gt;** *Response kinetics - individual*).
-2.  Select an individual mutant to view its activation/inactivation curves with points of interest.
+1.  Use the menu bar to navigate to the Response Kinetic Analysis module ( *Data Explorer* **&gt;&gt;** *Response kinetics - single*).
+2.  Select a single/individual mutant to view its activation/inactivation curves with points of interest.
 3.  Examine key parameters (asymptotic limits, t\_lag, t50, t\_final, tangent slopes) and compare them to the WT curve.
 
 #### Example 2: Comparing Multiple Mutants for Autophagy Competence
 
-1.  Use the menu bar to navigate to the Autophagy Competence Analysis module ( *Data Explorer* **&gt;&gt;** *Autophagy competence - multiple*).
+1.  Use the menu bar to navigate to the Autophagy Competence Analysis module ( *Data Explorer* **&gt;&gt;** *Autophagy competence - global*).
 2.  Use the dot plot to compare average log BF scores across multiple mutants.
 3.  Overlay control contours and apply library correction to assess how selected mutants deviate from genome-wide distributions and control sets.
 
