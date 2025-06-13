@@ -423,6 +423,7 @@ search_page <-
                       choices = c(
                         "Kinetic response (single)" = "arkin_single", 
                         "Kinetic response (global)" = "arkin_global"),
+                      selected = "arkin_single",
                       inline = TRUE
                     )
                   ),
@@ -433,6 +434,7 @@ search_page <-
                       choices = c(
                         "Autophagy competence (single)" = "acomp_single", 
                         "Autophagy competence (global)" = "acomp_global"),
+                      selected = "arkin_single",
                       inline = TRUE
                     )
                   )
@@ -480,7 +482,7 @@ ui_original <-
     id = "main_nav",
     header = htmltools::tags$head(
       close_dn_js0,
-      shiny::includeHTML("google_analytics.html"),
+      #shiny::includeHTML("google_analytics.html"),
       htmltools::tags$link(rel="shortcut icon", href="favicon-ous.svg")),
     navbar_options = bslib::navbar_options(
       bg = "#593196",
