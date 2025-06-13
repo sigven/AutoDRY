@@ -72,6 +72,12 @@ clean_internal_gene_orfs <- function(dataset = NULL){
   dataset_final <- dataset_final |>
     dplyr::anti_join(
       merged_duplicate_mutants, by = "screen_id")
+  
+  ## Remove duplicates
+  dataset_final <- dataset_final |>
+    dplyr::filter(screen_id != "MRPL4 / YPL173W") |>
+    dplyr::filter(screen_id != "TRM13 / YJL136C") |>
+    dplyr::filter(screen_id != "YAK1 / YJL137C")
 
   return(dataset_final)
 
@@ -195,7 +201,8 @@ kinetic_response_per_ko <- function(
 map_yeast_gene_identifiers <- function(
     screen_ids = NULL,
     update = T,
-    datestamp_genome_alliance = "v7.4.0_2024-10-09"){
+    datestamp_genome_alliance = "v8.1.0_2025-04-18"){
+    #datestamp_genome_alliance = "v7.4.0_2024-10-09"){
 
   datestamp <- as.character(Sys.Date())
   destfile_gene_info <- file.path(
@@ -459,7 +466,8 @@ map_yeast_gene_identifiers <- function(
 
 ####--- Start preparing data ----####
 
-datestamp_genome_alliance <- "v7.4.0_2024-10-09"
+#datestamp_genome_alliance <- "v7.4.0_2024-10-09"
+datestamp_genome_alliance <- "v8.1.0_2025-04-18"
 
 ####--- 1. Read autophagy predictions ---####
 
@@ -860,4 +868,63 @@ fst::write_fst(
   gw_autoph_data$BF_temporal, file.path(
     here::here(), "data","processed","BF_temporal.fst"))
 
+main_gene_ids <- 
+  gene_info_kinetic |> 
+  dplyr::select(orf_gene_id) |> 
+  dplyr::inner_join(
+    dplyr::select(gene_info_kinetic_multi, orf_gene_id)) |> 
+  dplyr::inner_join(
+    dplyr::select(gene_info_bf, orf_gene_id))
 
+saveRDS(main_gene_ids, file.path(
+  here::here(), "data","processed",
+  "main_gene_ids.rds"))
+
+# #arkin_data <- list()
+# #all_arkin_matrices_norm <- data.frame()
+# 
+# for(m in c("Value","Perturbation")){
+#   arkin_data[['Value']] <- m
+#   all_matrices <- data.frame()
+#   type <- "norm"
+#   if(m == "Value"){
+#     type <- "raw"
+#   }
+#   
+#   for(X in sort(unique(response_data$ds_parms$Parameter))){
+#     for(Y in sort(unique(response_data$ds_parms$Parameter))){
+#       key <- paste(X, Y, sep = "_")
+#       all_matrices <- 
+#         all_matrices |> 
+#         dplyr::bind_rows(as.data.frame(
+#         response_data[['ds_parms']] |> 
+#           dplyr::filter(
+#             .data$Parameter %in% 
+#               c(X,Y)) |> 
+#           dplyr::mutate(key = key) |>
+#           dplyr::select(c("Plate","Position","ORF",
+#                           "Gene","key", 
+#                           "Reference_sets",
+#                           "Parameter",
+#                           rlang::sym(arkin_data[['Value']])))))
+#           #tidyr::pivot_wider(
+#           #  names_from = Parameter, 
+#           #  values_from = arkin_data[['Value']]))
+#     }
+#   }
+#   
+#   all_matrices <- all_matrices |>
+#     dplyr::left_join(
+#       gw_autoph_type_data |>
+#         dplyr::select(Gene, ORF, Type),
+#       by = c("Gene", "ORF"),
+#       relationship = "many-to-many"
+#     ) |>
+#     dplyr::distinct()
+#   
+#   fst::write_fst(
+#     all_matrices, 
+#     file.path(here::here(), 
+#               "data","processed2",
+#               paste0("all_arkin_matrices_",m,".fst")))
+# }
