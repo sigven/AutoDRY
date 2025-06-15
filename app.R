@@ -72,6 +72,9 @@ autodry_response_ui[['single']] <-
           class = "bg-dark",
           shiny::textOutput("selected_gene_kinetic")),
         bslib::card_body(
+          fill = TRUE,
+          fillable = TRUE,
+          min_height = "700px",
           shiny::htmlOutput("gene_info_kinetic"),
           shiny::uiOutput("arkin_warning")
         )
@@ -93,7 +96,7 @@ autodry_response_ui[['global']] <-
           inputId = "gene_id_arkin_global",
           label = "Highlight gene/ORF mutants (max 10)",
           choices = NULL,
-          multiple = T,
+          multiple = TRUE,
           selected = "AAC1 / YMR056C",
           options = list(
             maxOptions = 5500,     # Set this to your max or desired number
@@ -124,7 +127,12 @@ autodry_response_ui[['global']] <-
         bslib::card_header(
           class = "bg-dark", 
           "Global autophagy response kinetics"),
-        shiny::plotOutput("arkin_global")
+        bslib::card_body(
+          fill = TRUE,
+          fillable = TRUE,
+          min_height = "700px",
+          shiny::plotOutput("arkin_global")
+        )
       ),
       fill = T
     )
@@ -144,14 +152,19 @@ autodry_competence_ui[['single']] <-
       choices = NULL, width = "100%")
     ),
     bslib::page_fillable(
-      fill = T,
+      fill = TRUE,
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(
           class = "bg-dark",
           shiny::textOutput("selected_gene_bf")),
-        shiny::htmlOutput("gene_info_bf"),
-        shiny::uiOutput("acomp_warning")
+        bslib::card_body(
+          shiny::htmlOutput("gene_info_bf"),
+          fill = TRUE,
+          fillable = TRUE,
+          min_height = "700px",
+          shiny::uiOutput("acomp_warning")
+        )
       ),
       shiny::includeHTML(
         "data/section_content/citation_footnote.md")
@@ -170,7 +183,7 @@ autodry_competence_ui[['global']] <-
           selected = "AAC1 / YMR056C",
           choices = NULL,
           
-          multiple = T,
+          multiple = TRUE,
           options = list(
             maxOptions = 5500,     # Set this to your max or desired number
             minItems = 1,
@@ -199,12 +212,17 @@ autodry_competence_ui[['global']] <-
       )
     ),
     bslib::page_fillable(
-      fill = T,
+      fill = TRUE,
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(
           class = "bg-dark", "Global autophagy competence"),
-        shiny::plotOutput("acomp_global")
+        bslib::card_body(
+          fill = TRUE,
+          fillable = TRUE,
+          min_height = "700px",
+          shiny::plotOutput("acomp_global")
+        )
       )
     )
   )
@@ -384,8 +402,6 @@ gw_autoph_competence_data <- load_autophagy_competence_data()
 gw_autoph_type_data <- load_type_data()
 main_gene_ids <- load_main_gene_ids()
 
-#ui_original <- shiny::uiOutput("main_ui")
-
 search_page <- 
   bslib::nav_panel(
     "Main",
@@ -441,15 +457,20 @@ search_page <-
                 )
               ),
               
+              shiny::textInput(
+                "gene_search_input", 
+                "Search for yeast gene/ORF mutant", 
+                "", width = "100%"),
+              shiny::uiOutput("gene_mutant_suggestions"),
               # 3. Selectize Input
-              shiny::selectizeInput(
-                "main_gene_search", 
-                "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics", 
-                choices = NULL, 
-                options = list(
-                  maxOptions = 5500     # Set this to your max or desired number
-                ),
-                width = "100%"),
+              #shiny::selectizeInput(
+              #  "main_gene_search", 
+              #  "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics", 
+              #  choices = NULL, 
+              #  options = list(
+              #    maxOptions = 5500     # Set this to your max or desired number
+              #  ),
+              #  width = "100%"),
               
               # 4. Submit Button
               shiny::actionButton(
@@ -477,12 +498,37 @@ close_dn_js0 <-
         "
   )
 
+detect_browser_js <- 
+  shiny::tags$script(
+  shiny::HTML("
+    Shiny.addCustomMessageHandler('getBrowserInfo', function(message) {
+      var userAgent = navigator.userAgent;
+      var browser = 'Unknown';
+      if (userAgent.indexOf('Chrome') > -1 && userAgent.indexOf('Edg') === -1) {
+        browser = 'Chrome';
+      } else if (userAgent.indexOf('Safari') > -1 && userAgent.indexOf('Chrome') === -1) {
+        browser = 'Safari';
+      } else if (userAgent.indexOf('Firefox') > -1) {
+        browser = 'Firefox';
+      } else if (userAgent.indexOf('Edg') > -1) {
+        browser = 'Edge';
+      }
+      Shiny.setInputValue('client_browser', browser, {priority: 'event'});
+    });
+  "))
+
 ui_original <- 
   bslib::page_navbar(
     id = "main_nav",
     header = htmltools::tags$head(
       close_dn_js0,
+      detect_browser_js,
       #shiny::includeHTML("google_analytics.html"),
+      htmltools::tags$script(
+        shiny::HTML(
+        "Shiny.addCustomMessageHandler('getUserAgent', function(message) {
+          Shiny.setInputValue('client_browser', navigator.userAgent);
+        });")),
       htmltools::tags$link(rel="shortcut icon", href="favicon-ous.svg")),
     navbar_options = bslib::navbar_options(
       bg = "#593196",
@@ -550,7 +596,57 @@ ui_original <-
 ## Shiny server functions
 server <- function(input, output, session) {
 
-  selected_gene <- reactiveVal()
+  #user_browser <- reactiveVal()
+  selected_gene <- shiny::reactiveVal()
+
+  observe({
+    session$sendCustomMessage("getBrowserInfo", list())
+  })
+  
+  filtered_genes <- shiny::reactive({
+    req(nchar(input$gene_search_input) >= 2)
+    matches <- grep(
+      input$gene_search_input, 
+      main_gene_ids$orf_gene_id, 
+      ignore.case = TRUE, 
+      value = TRUE)
+    head(matches, 50)  # limit suggestions for performance
+  })
+  
+  # Render selectInput dynamically once user types enough
+  output$gene_mutant_suggestions <- shiny::renderUI({
+    if (nchar(input$gene_search_input) < 2) return(NULL)
+    
+    choices <- filtered_genes()
+    if (length(choices) == 0) return("No matches found.")
+    
+    shiny::selectInput(
+      "main_gene_search", 
+      "Select a match in the list to explore different views of autophagy dynamics:", multiple = TRUE,
+      choices = choices, width = "100%", selectize = F)
+  })
+  
+  
+  # output$conditional_main_select <- shiny::renderUI({
+  #   req(input$client_browser)
+  #   #cat(input$client_browser,"\n")
+  #   if (input$client_browser == "Safari") {
+  #     shiny::textInput(
+  #       "gene_search_input", 
+  #       "Search for yeast gene/ORF mutant to explore different views of autophagy dynamics:", 
+  #       "")
+  #     shiny::uiOutput(gene_mutant_suggestions)
+  #   } else {
+  #     shiny::selectizeInput(
+  #       "main_gene_search", 
+  #       "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics", 
+  #       choices = NULL, 
+  #       options = list(
+  #         maxOptions = 5500     # Set this to your max or desired number
+  #       ),
+  #       width = "100%")
+  #   }
+  # })
   
   shiny::observeEvent(input$submit_btn, {
     selected_gene(input$main_gene_search)
@@ -576,7 +672,7 @@ server <- function(input, output, session) {
     
   })
   
-  observe({
+  shiny::observe({
     if (input$main_nav %in% "arkin_single_view" || 
         input$main_nav %in% "arkin_global_view" || 
         input$main_nav %in% "acomp_single_view" || 
@@ -614,6 +710,7 @@ server <- function(input, output, session) {
     gw_autoph_competence_data[['bf_overall']] |>
     subset(paste(Plate, Position) %in% ac_global_init$Positions) |>
     as.data.frame()
+  
   
   ac_global_init[['X']] <- BF_variables[1]
   ac_global_init[['Y']] <- BF_variables[1]
@@ -654,22 +751,34 @@ server <- function(input, output, session) {
   
   arkin_global_state <- arkin_global_init
   
-  shiny::updateSelectizeInput(
-    session, "main_gene_search",
-    choices = main_gene_ids$orf_gene_id,
-    server = TRUE)
+  # observeEvent(input$client_browser, {
+  #   if (input$client_browser != "Safari") {
+  #     shiny::updateSelectizeInput(
+  #       session, "main_gene_search",
+  #       choices = main_gene_ids$orf_gene_id,
+  #       server = TRUE)
+  #   }
+  # })
   
-  shiny::updateSelectizeInput(
-    session, "gene_id_arkin_single",
-    choices = gw_autoph_response_data$gene_info_kinetic$orf_gene_id,
-    server = TRUE)
-  
-  shiny::updateSelectizeInput(
-    session, "gene_id_arkin_global",
-    selected = "AAC1 / YMR056C",
-    choices = gw_autoph_response_data$gene_info_kinetic_multi$orf_gene_id,
-    server = TRUE)
-  
+  shiny::observeEvent(input$client_browser, {
+    if (input$client_browser != "Safari") {
+      shiny::updateSelectizeInput(
+        session, "gene_id_arkin_single",
+        choices = gw_autoph_response_data$gene_info_kinetic$orf_gene_id,
+        server = TRUE)
+    }
+  })
+    
+  shiny::observeEvent(input$client_browser, {
+    if (input$client_browser != "Safari") {
+      shiny::updateSelectizeInput(
+        session, "gene_id_arkin_global",
+        selected = "AAC1 / YMR056C",
+        choices = gw_autoph_response_data$gene_info_kinetic_multi$orf_gene_id,
+        server = TRUE)
+    }
+  })
+      
   # Dynamically show plot or warning
   output$arkin_warning <- shiny::renderUI({
     if (is.null(input$gene_id_arkin_single) || input$gene_id_arkin_single == "") {
@@ -712,18 +821,26 @@ server <- function(input, output, session) {
       show_library_type_contour = input$bf_contour)
   })
 
-  shiny::updateSelectizeInput(
-    session, "gene_id_acomp_global",
-    choices = gw_autoph_competence_data$gene_info_bf$orf_gene_id,
-    selected = "AAC1 / YMR056C",
-    server = TRUE
-  )
+  shiny::observeEvent(input$client_browser, {
+    if (input$client_browser != "Safari") {
+      shiny::updateSelectizeInput(
+        session, "gene_id_acomp_global",
+        choices = gw_autoph_competence_data$gene_info_bf$orf_gene_id,
+        selected = "AAC1 / YMR056C",
+        server = TRUE
+      )
+    }
+  })
   
+  shiny::observeEvent(input$client_browser, { 
+    if (input$client_browser != "Safari") {
+      shiny::updateSelectizeInput(
+        session, "gene_id_acomp_single",
+        choices = gw_autoph_competence_data$gene_info_bf$orf_gene_id,
+        server = TRUE)
+    }
+  })
   
-  shiny::updateSelectizeInput(
-    session, "gene_id_acomp_single",
-    choices = gw_autoph_competence_data$gene_info_bf$orf_gene_id,
-    server = TRUE)
   
   # Dynamically show plot or warning
   output$acomp_warning <- shiny::renderUI({
