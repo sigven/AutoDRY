@@ -62,6 +62,7 @@ autodry_response_ui[['single']] <-
         options =
           list(maxOptions = 5500),     # Set this to your max or desired number
         choices = NULL, 
+        multiple = FALSE,
         width = "100%")
     ),
     bslib::page_fillable(
@@ -149,7 +150,9 @@ autodry_competence_ui[['single']] <-
       "Select gene/ORF mutant", 
       options =
         list(maxOptions = 5500),     # Set this to your max or desired number
-      choices = NULL, width = "100%")
+      choices = NULL,
+      multiple = FALSE,
+      width = "100%")
     ),
     bslib::page_fillable(
       fill = TRUE,
@@ -622,8 +625,10 @@ server <- function(input, output, session) {
     
     shiny::selectInput(
       "main_gene_search", 
-      "Select a match in the list to explore different views of autophagy dynamics:", multiple = TRUE,
-      choices = choices, width = "100%", selectize = F)
+      "Select a match in the list to explore different views of autophagy dynamics:", 
+      choices = choices, 
+      multiple = FALSE,
+      width = "100%", selectize = F)
   })
   
   
