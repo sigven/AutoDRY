@@ -10,7 +10,7 @@ library(fst)
 
 show_gene_info <- function(primary_id = NULL,
                            gene_info = NULL){
-
+  
   res <- list()
   res[['name']] <- '<i>No information available</i>'
   res[['human_orthologs']] <- '<i>No information available</i>'
@@ -35,7 +35,7 @@ show_gene_info <- function(primary_id = NULL,
           "<a href='https://www.yeastgenome.org/locus/",
           stringr::str_replace(
             gene_info_id$sgd_id,"SGD:",""),
-            "' target='_blank'>",res[['name']],
+          "' target='_blank'>",res[['name']],
           "</a>")
       }else{
         res[['sgd_link']] <- res[['name']]
@@ -43,12 +43,12 @@ show_gene_info <- function(primary_id = NULL,
     }
   }
   return(res)
-
+  
 }
 
 
 load_kinetic_response_data <- function(){
-
+  
   df_DS_curvefits <- fst::read_fst(
     file.path(here::here(), "data","processed","ds_curvefits.fst"))
   df_DS_parms <- fst::read_fst(
@@ -76,7 +76,7 @@ load_kinetic_response_data <- function(){
     gene_info_kinetic = gene_info_kinetic,
     gene_info_kinetic_multi = gene_info_kinetic_multi
   ))
-
+  
 }
 
 load_main_gene_ids <- function(){
@@ -86,19 +86,19 @@ load_main_gene_ids <- function(){
   return(main_gene_ids)
 }
 
-load_arkin_matrices <- function(){
-  arkin_matrices <- list()
-  
-  arkin_matrices[['raw']] <- fst::read_fst(
-    file.path(here::here(), 
-              "data","processed","all_arkin_matrices_Value.fst"))
-  
-  arkin_matrices[['norm']] <- fst::read_fst(
-    file.path(here::here(), 
-              "data","processed","all_arkin_matrices_Perturbation.fst"))
-  
-  return(arkin_matrices)
-}
+# load_kinresp_matrices <- function(){
+#   kinresp_matrices <- list()
+#
+#   kinresp_matrices[['raw']] <- fst::read_fst(
+#     file.path(here::here(),
+#               "data","processed","all_kinresp_matrices_Value.fst"))
+#
+#   kinresp_matrices[['norm']] <- fst::read_fst(
+#     file.path(here::here(),
+#               "data","processed","all_kinresp_matrices_Perturbation.fst"))
+#
+#   return(kinresp_matrices)
+# }
 
 load_type_data <- function(){
   type_data <- fst::read_fst(
@@ -108,7 +108,7 @@ load_type_data <- function(){
 }
 
 load_autophagy_competence_data <- function(){
-
+  
   autophagy_competence_plot_input <- readRDS(
     file.path(here::here(), "data","processed","gw_autoph_competence_plot_input.rds"))
   gene_info_bf <- fst::read_fst(
@@ -119,30 +119,30 @@ load_autophagy_competence_data <- function(){
     file.path(here::here(), "data","processed","BF_overall.fst"))
   df_BF_temporal <- fst::read_fst(
     file.path(here::here(), "data","processed","BF_temporal.fst"))
-
+  
   return(list(
     bf_overall = df_BF_overall,
     #dnn_preds = df_DNN_preds,
     bf_temporal = df_BF_temporal,
     per_ko = autophagy_competence_plot_input,
     gene_info_bf = gene_info_bf
-
+    
   ))
-
+  
 }
 
 
 plot_autophagy_competence <- function(competence_data = NULL){
-
+  
   p <- NULL
-
+  
   x_lab <-
     paste0("<br><b>Autophagosome formation</b><br><br>",
            "<i>log BFt (VAM6:ATG1)")
   y_lab <-
     paste0("<b>Autophagosome clearance</b><br><br>",
            "<i>log BFt (WT:VAM6)</i><br>")
-
+  
   p <- ggplot2::ggplot(
     competence_data$BF_response,
     ggplot2::aes(
@@ -187,23 +187,23 @@ plot_autophagy_competence <- function(competence_data = NULL){
       legend.text = ggplot2::element_text(size=18, family = "Helvetica"),
       strip.background = ggplot2::element_blank(),
       legend.position = "right")
-
+  
   return(p)
-
-
+  
+  
 }
 
 
-plot_response_kinetics <- function(response_data = NULL){
-
+plot_kinetic_response <- function(response_data = NULL){
+  
   y_pred <- NULL
   y_raw <- NULL
   y_pred.ctr <- NULL
   double_sigmoidal_model <- NULL
   slibrary <- NULL
   id = NULL
-
-
+  
+  
   if(!is.null(response_data)){
     if("y_pred" %in% names(response_data)){
       y_pred <- response_data$y_pred
@@ -227,13 +227,13 @@ plot_response_kinetics <- function(response_data = NULL){
   
   # Example plot logic (replace with your own)
   #return(hist(rnorm(100), main = paste("Plot for", id)))
-
+  
   alpha_ribbon <- 0.1
   alpha_segment <- 1
   size_segment <- 0.4
   size_line <- 0.4
   arrow_length <- 0.15
-
+  
   p <- ggplot2::ggplot() +
     ggplot2::geom_vline(xintercept=0, lty=2) +
     ggplot2::geom_vline(xintercept=12, lty=2) +
@@ -328,7 +328,7 @@ plot_response_kinetics <- function(response_data = NULL){
     ggplot2::labs(
       x="Time (hours)",
       y="Autophagy (%)") +
-      #title=paste(id, slibrary)) +
+    #title=paste(id, slibrary)) +
     ggplot2::scale_color_manual(
       values=ggsci::pal_jco("default", alpha = 1)(7)[c(7,1,4)]) +
     ggplot2::theme_bw(base_size = 18, base_family = "Helvetica") +
@@ -340,7 +340,7 @@ plot_response_kinetics <- function(response_data = NULL){
       legend.text = ggplot2::element_text(size=18),
       legend.title = ggplot2::element_blank()
     )
-
+  
   return(p)
 }
 
@@ -348,16 +348,16 @@ plot_response_kinetics <- function(response_data = NULL){
 plot_autophagy_competence_global <- function(
     ac_multi_data = NULL,
     show_library_type_contour = FALSE){
- 
-  ac_multi_data[['mat']]$X <- 
+  
+  ac_multi_data[['mat']]$X <-
     ac_multi_data[['mat']][,ac_multi_data[['X']]]
-  ac_multi_data[['mat']]$Y <- 
+  ac_multi_data[['mat']]$Y <-
     ac_multi_data[['mat']][,ac_multi_data[['Y']]]
   
   if(NROW(ac_multi_data[['mat_select']]) > 0){
-    ac_multi_data[['mat_select']]$X <- 
+    ac_multi_data[['mat_select']]$X <-
       ac_multi_data[['mat_select']][,ac_multi_data[['X']]]
-    ac_multi_data[['mat_select']]$Y <- 
+    ac_multi_data[['mat_select']]$Y <-
       ac_multi_data[['mat_select']][,ac_multi_data[['Y']]]
     
     ac_multi_data[['mat_select']] <- ac_multi_data[['mat_select']] |>
@@ -375,12 +375,12 @@ plot_autophagy_competence_global <- function(
       col="lightgray", size=0.9, pch=16, alpha=0.8) +
     ggplot2::stat_density_2d(
       data=ac_multi_data$mat[which(ac_multi_data$mat$Plate_controls=="+"),] |>
-                               dplyr::mutate(Gene = ifelse(
-                                 is.na(Gene) | Gene == "WT", "WT/Control", Gene)),
-                             ggplot2::aes(fill=Gene, group=Gene, alpha = ..level..),
-                             geom = "polygon", col=NA) +
+        dplyr::mutate(Gene = ifelse(
+          is.na(Gene) | Gene == "WT", "WT/Control", Gene)),
+      ggplot2::aes(fill=Gene, group=Gene, alpha = ..level..),
+      geom = "polygon", col=NA) +
     ggplot2::geom_point(
-      data=ac_multi_data$mat[which(!is.na(ac_multi_data$mat$Reference_sets) & 
+      data=ac_multi_data$mat[which(!is.na(ac_multi_data$mat$Reference_sets) &
                                      !grepl("ORF",ac_multi_data$mat$Reference_sets)),],
       ggplot2::aes(col=Reference_sets), size=1.3) +
     ggplot2::labs(
@@ -427,18 +427,18 @@ plot_autophagy_competence_global <- function(
 }
 
 
-plot_response_kinetics_global <- function(
+plot_kinetic_response_global <- function(
     mat = NULL,
     mat_select = NULL,
     X = NULL,
     Y = NULL,
-    #arkin_state_data = NULL,
+    #kinresp_state_data = NULL,
     custom_scale_limits = TRUE,
     show_library_type_contour = FALSE){
   
-  #mat <- arkin_state_data[['mat']]
-  #mat_select <- arkin_state_data[['mat_select']]
-
+  #mat <- kinresp_state_data[['mat']]
+  #mat_select <- kinresp_state_data[['mat_select']]
+  
   #Filter, replace manual control of scale?
   if(custom_scale_limits == TRUE){
     x_lower_bound <- as.numeric(
@@ -494,7 +494,7 @@ plot_response_kinetics_global <- function(
     ggplot2::geom_point(
       data=mat[which(!is.na(mat$Reference_sets)),],
       ggplot2::aes(col = Reference_sets), size=1.5)+
-    ggplot2::labs(x = X, 
+    ggplot2::labs(x = X,
                   y = Y) +
     ggplot2::xlim(x_lower_bound, x_upper_bound) +
     ggplot2::ylim(y_lower_bound, y_upper_bound) +
@@ -537,4 +537,3 @@ plot_response_kinetics_global <- function(
   
   
 }
-

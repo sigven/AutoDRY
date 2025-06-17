@@ -3,6 +3,7 @@ library(shiny)
 
 ## Load required packages
 source('helpers.R')
+source('static_content.R')
 
 ## Create UI elements
 
@@ -10,13 +11,11 @@ source('helpers.R')
 
 ## UI elements - Data Explorer (DE)
 ## - Menu
-##  1) Response kinetics - single:  ("autodry_response_ui[['single']]")
-##  2) Response kinetics - global:  ("autodry_response_ui[['global']]")
+##  1) Response kinetics - single:  ("autodry_kinresp_ui[['single']]")
+##  2) Response kinetics - global:  ("autodry_kinresp_ui[['global']]")
 ##  3) Autophagy competence - single: ("autodry_competence_ui[['single']]")
 ##  4) Autophagy competence - global: ("autodry_competence_ui[['global']]")
 ##
-
-
 
 get_kinetic_response_params <- function(){
   
@@ -45,25 +44,39 @@ get_kinetic_response_params <- function(){
 
 
 autodry_competence_ui <- list()
-autodry_response_ui <- list()
+autodry_kinresp_ui <- list()
 for(e in c('single','global')){
   autodry_competence_ui[[e]] <- list()
-  autodry_response_ui[[e]] <- list()
+  autodry_kinresp_ui[[e]] <- list()
 }
 
-autodry_response_ui[['single']] <-
+autodry_kinresp_ui[['single']] <-
   bslib::layout_sidebar(
     fillable = TRUE,
     fill = TRUE,
     sidebar = bslib::sidebar(
-      shiny::selectizeInput(
-        "gene_id_arkin_single", 
-        "Select gene/ORF mutant", 
-        options =
-          list(maxOptions = 5500),     # Set this to your max or desired number
-        choices = NULL, 
-        multiple = FALSE,
-        width = "100%")
+      shiny::conditionalPanel(
+        condition = "!output.isSafari",
+        shiny::selectizeInput(
+          "gene_id_kinresp_single",
+          "Select gene/ORF mutant",
+          options =
+            list(maxOptions = 5500),     # Set this to your max or desired number
+          choices = NULL,
+          multiple = FALSE,
+          width = "100%")
+      ),
+      shiny::conditionalPanel(
+        condition = "output.isSafari",
+        shiny::tagList(
+          shiny::textInput(
+            "gene_search_input_kinresp_single",
+            "Search for gene/ORF mutant",
+            "atg", width = "100%"),
+          shiny::uiOutput("gene_mutant_suggestions_kinresp_single")
+        )
+      ),
+      width = "320px"
     ),
     bslib::page_fillable(
       fill = TRUE,
@@ -77,7 +90,7 @@ autodry_response_ui[['single']] <-
           fillable = TRUE,
           min_height = "700px",
           shiny::htmlOutput("gene_info_kinetic"),
-          shiny::uiOutput("arkin_warning")
+          shiny::uiOutput("kinresp_warning")
         )
       ),
       htmltools::div(
@@ -87,14 +100,14 @@ autodry_response_ui[['single']] <-
     )
   )
 
-autodry_response_ui[['global']] <-
+autodry_kinresp_ui[['global']] <-
   bslib::layout_sidebar(
     fillable = TRUE,
     fill = TRUE,
     sidebar = bslib::sidebar(
       list(
         shiny::selectizeInput(
-          inputId = "gene_id_arkin_global",
+          inputId = "gene_id_kinresp_global",
           label = "Highlight gene/ORF mutants (max 10)",
           choices = NULL,
           multiple = TRUE,
@@ -116,23 +129,24 @@ autodry_response_ui[['global']] <-
           selected = "T50 -N"
         ),
         shiny::checkboxInput(
-          "use_perturbation_data", 
-          "Use normalized values", 
+          "use_perturbation_data",
+          "Use normalized values",
           value = F),
         shiny::checkboxInput(
-          "contour", "Show contour plots", value = F))
+          "contour", "Show contour plots", value = F)),
+      width = "320px"
     ),
     bslib::page_fillable(
       bslib::card(
         full_screen = TRUE,
         bslib::card_header(
-          class = "bg-dark", 
+          class = "bg-dark",
           "Global autophagy response kinetics"),
         bslib::card_body(
           fill = TRUE,
           fillable = TRUE,
           min_height = "700px",
-          shiny::plotOutput("arkin_global")
+          shiny::plotOutput("kinresp_global")
         )
       ),
       fill = T
@@ -144,15 +158,30 @@ autodry_competence_ui[['single']] <-
   bslib::layout_sidebar(
     fillable = TRUE,
     fill = TRUE,
+    
     sidebar = bslib::sidebar(
-      shiny::selectizeInput(
-      "gene_id_acomp_single", 
-      "Select gene/ORF mutant", 
-      options =
-        list(maxOptions = 5500),     # Set this to your max or desired number
-      choices = NULL,
-      multiple = FALSE,
-      width = "100%")
+      shiny::conditionalPanel(
+        condition = "!output.isSafari",
+        shiny::selectizeInput(
+          "gene_id_acomp_single",
+          "Select gene/ORF mutant",
+          options =
+            list(maxOptions = 5500),
+          choices = NULL,
+          multiple = FALSE,
+          width = "100%")
+      ),
+      shiny::conditionalPanel(
+        condition = "output.isSafari",
+        shiny::tagList(
+          shiny::textInput(
+            "gene_search_input_acomp_single",
+            "Search for gene/ORF mutant",
+            "", width = "100%"),
+          shiny::uiOutput("gene_mutant_suggestions_acomp_single")
+        )
+      ),
+      width = "320px"
     ),
     bslib::page_fillable(
       fill = TRUE,
@@ -208,11 +237,11 @@ autodry_competence_ui[['global']] <-
           selected = "Autophagosome clearance"
         ),
         shiny::checkboxInput(
-          "bf_library_adjustment", 
+          "bf_library_adjustment",
           "Perform library correction", value = F),
         shiny::checkboxInput(
           "bf_contour", "Show contour plots", value = F)
-      )
+      ), width = "320px"
     ),
     bslib::page_fillable(
       fill = TRUE,
@@ -231,181 +260,12 @@ autodry_competence_ui[['global']] <-
   )
 
 
-
-paper_info <- paste0(
-  "<h5><b><p style=text-align:justify;'>",
-  "<a href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2 ",
-  "target='_blank'>Time-resolved functional genomics using deep learning ",
-  "reveals a global hierarchical control of autophagy (bioRxiv, 2025)</a></p></b></h5>",
-  "<h6><p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/authors.md"),
-  "</p></h6>",
-  "<p style='text-align:justify;'><h6>Correspondence to <i>nathac@uio.no </i>",
-  "or <i>j.m.enserink@ibv.uio.no</i></h6></p>")
-
-synopsis <- paste0(
-  "<h5><b><p style='color:$primary;text-align:justify;'>",
-  htmltools::includeText("data/section_content/synopsis_I.md"),
-  "</p></b></h5>",
-  "<h6><p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/synopsis_II.md"),
-  "</p></h6>")
-
-what_is_autodry <- paste0(
-  "<h5><b><p style='color:$primary;text-align:justify;'>",
-  htmltools::includeText("data/section_content/what_is_autodry_I.md"),
-  "</p></b></h5>",
-  "<h6><p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/what_is_autodry_II.md"),
-  "</p></h6>")
-
-about_study_text <- paste0(
-  "<p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/about_the_study_I.md"),
-  "</p>",
-  "AutoDRY provides two key outputs that provide different ",
-  "perspectives on autophagy regulation:<br>",
-  "<p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/about_the_study_II.md"),
-  "</p>")
-
-disclaimer_text <- paste0(
-  "<p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/disclaimer.md"),
-  "</p>")
-
-documentation_text <- paste0(
-  "<p style='text-align:justify;'>",
-  htmltools::includeText("data/section_content/documentation.md"),
-  "</p>")
-
-
-autodry_footer <-
-  bslib::card_footer(
-    shiny::markdown(
-      paste0(
-        "<br>",
-        "<div align='center'>",
-        "<a href='https://www.uio.no' target='_blank'><img src='uio.png' alt='uio' style='width:20%;height:90%;'></a>",
-        "<a href='https://ous-research.no/institute' target='_blank'><img src='ous.png' alt='ous' style='width:20%'></a>",
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
-        "<a href='https://www.med.uio.no/cancell/english/' target='_blank'><img src='cancell.png' style='width:4%;height:48%;'></a>",
-        "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;",
-        "<a href='https://arctic-autophagy.no/' target='_blank'><img src='arctic.png' style='width:10%;height:45%'></a>",
-        "</div>")
-    )
-  )
-
-about_page <-
-  bslib::page_fillable(
-    tags$style(HTML(".card {border-radius: 0.9rem;}")),
-    tags$style(HTML(".card2 {border-radius: 0.1rem;}")),
-    bslib::card(
-      class = "card2",
-      full_screen = F,
-      fillable = F,
-      fill = F,
-      bslib::card_body(
-        #min_height = 300,
-        bslib::layout_column_wrap(
-          width = NULL,
-          fill = F,
-          style = bslib::css(
-            grid_template_columns = "22fr 1fr 22fr 1fr 22fr"),
-          bslib::card(
-            bslib::card_header(class = "bg-dark","  Background"),
-            shiny::markdown(synopsis)),
-          shiny::markdown(""),
-          bslib::card(
-            bslib::card_header(class = "bg-dark","  What is AutoDRY?"),
-            shiny::markdown(what_is_autodry)),
-          shiny::markdown(""),
-          bslib::card(
-            bslib::card_header(class = "bg-dark","  Citation"),
-            shiny::markdown(paper_info)
-          )
-        ),
-        shiny::markdown(
-          paste0(
-            "<br><br><div align='center'>",
-            "<img src='MNS_Figure_1A_v2.png' alt='Autophagy_Dynamics_Study_Overview'",
-            " width='90%' height='100%' align='center'/></div><br>"
-          )
-        ),
-        bslib::layout_column_wrap(
-          width = NULL,
-          fill = F,
-          bslib::card(
-            bslib::card_header(class = "bg-dark","  About the study"),
-            shiny::markdown(about_study_text)
-          )
-        )
-      ),
-      autodry_footer
-    )
-  )
-
-
-docs_page <- 
-  bslib::page_fillable(
-    tags$style(HTML(".card {border-radius: 0.9rem;}")),
-    tags$style(HTML(".card2 {border-radius: 0rem}")),
-    bslib::card(
-      class = "card2",
-      full_screen = F,
-      fillable = F,
-      fill = F,
-      bslib::card_body(
-        bslib::layout_column_wrap(
-          width = NULL,
-          fill = TRUE,
-          bslib::card(
-            bslib::card_header(
-              class = "bg-dark","  Documentation"),
-            bslib::card_body(
-              shiny::markdown(documentation_text)
-            )
-          )
-        )
-      ),
-      autodry_footer
-    )
-  )
-
-disclaimer_page <-
-  bslib::page_fillable(
-    tags$style(HTML(".card {border-radius: 0.9rem;}")),
-    tags$style(HTML(".card2 {border-radius: 0rem}")),
-    bslib::card(
-      class = "card2",
-      full_screen = F,
-      fillable = F,
-      fill = F,
-      bslib::card_body(
-        bslib::layout_column_wrap(
-          width = NULL,
-          fill = TRUE,
-          bslib::card(
-            bslib::card_header(
-              class = "bg-dark","  DISCLAIMER"),
-            bslib::card_body(
-              shiny::markdown(disclaimer_text)
-            )
-          )
-        )
-      ),
-      autodry_footer
-    )
-  )
-
-
-
 gw_autoph_response_data <- load_kinetic_response_data()
 gw_autoph_competence_data <- load_autophagy_competence_data()
 gw_autoph_type_data <- load_type_data()
 main_gene_ids <- load_main_gene_ids()
 
-search_page <- 
+search_page <-
   bslib::nav_panel(
     "Main",
     fill = TRUE,
@@ -422,54 +282,115 @@ search_page <-
           htmltools::div(
             class = "d-flex align-items-center justify-content-center",
             style = "height: 100%; padding: 2rem;",
-            div(
+            htmltools::div(
               class = "text-center",
               style = "max-width: 600px; width: 100%;",
               # 1. Logo or Image
               htmltools::tags$img(
-                src = "Autodry_logo.png", 
-                height = "150px", 
+                src = "Autodry_logo.png",
+                height = "150px",
                 style = "margin-bottom: 30px;"),
               
               # 2. 2x2 Radio Grid
-              div(
-                class = "mb-3",
-                fluidRow(
-                  column(
-                    6,
-                    radioButtons(
-                      "analysis_view", "",
-                      choices = c(
-                        "Kinetic response (single)" = "arkin_single", 
-                        "Kinetic response (global)" = "arkin_global"),
-                      selected = "arkin_single",
-                      inline = TRUE
+              
+              # shiny::conditionalPanel(
+              #   condition = "!output.isSafari",
+              #   htmltools::div(
+              #     class = "mb-3",
+              #     radioButtons(
+              #       "analysis_view", "",
+              #       choiceNames = c(
+              #         "Kinetic response (single)",
+              #         "Kinetic response (global)",
+              #         "Autophagy competence (single)",
+              #         "Autophagy competence (global)"
+              #       ),
+              #       choiceValues = c(
+              #         "kinresp_single",
+              #         "kinresp_global",
+              #         "acomp_single",
+              #         "acomp_global"
+              #       ),
+              #       selected = "kinresp_global",
+              #       inline = TRUE
+              #     )
+              #   )
+              # ),
+              shiny::conditionalPanel(
+                condition = "!output.isSafari",
+                htmltools::div(
+                  class = "mb-3",
+                  fluidRow(
+                    column(
+                      6,
+                      radioButtons(
+                        "analysis_view", "",
+                        choiceNames = c(
+                          "Kinetic response (single)",
+                          "Kinetic response (global)"),
+                        choiceValues = c(
+                          "kinresp_single",
+                          "kinresp_global"),
+                        selected = "kinresp_single",
+                        inline = TRUE
+                      )
+                    ),
+                    column(
+                      6,
+                      radioButtons(
+                        "analysis_view", "",
+                        choiceNames = c(
+                          "Autophagy competence (single)",
+                          "Autophagy competence (global)"),
+                        choiceValues = c(
+                          "acomp_single",
+                          "acomp_global"),
+                        selected = "kinresp_single",
+                        inline = TRUE
+                      )
                     )
-                  ),
-                  column(
-                    6,
-                    radioButtons(
-                      "analysis_view", "",
-                      choices = c(
-                        "Autophagy competence (single)" = "acomp_single", 
-                        "Autophagy competence (global)" = "acomp_global"),
-                      selected = "arkin_single",
-                      inline = TRUE
+                  )
+                )
+              ),
+              shiny::conditionalPanel(
+                condition = "output.isSafari",
+                htmltools::div(
+                  class = "mb-3",
+                  fluidRow(
+                    column(
+                      6,
+                      radioButtons(
+                        "analysis_view_safari", "",
+                        choices = c(
+                          "Kinetic response" = "kinresp_single"),
+                        selected = "kinresp_single",
+                        inline = TRUE
+                      )
+                    ),
+                    column(
+                      6,
+                      radioButtons(
+                        "analysis_view_safari", "",
+                        choices = c(
+                          "Autophagy competence" = "acomp_single"),
+                        selected = "kinresp_single",
+                        inline = TRUE
+                      )
                     )
                   )
                 )
               ),
               
               shiny::textInput(
-                "gene_search_input", 
-                "Search for yeast gene/ORF mutant", 
+                "gene_search_input",
+                "Search for yeast gene/ORF mutant",
                 "", width = "100%"),
               shiny::uiOutput("gene_mutant_suggestions"),
               # 3. Selectize Input
               #shiny::selectizeInput(
-              #  "main_gene_search", 
-              #  "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics", 
-              #  choices = NULL, 
+              #  "main_gene_search",
+              #  "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics",
+              #  choices = NULL,
               #  options = list(
               #    maxOptions = 5500     # Set this to your max or desired number
               #  ),
@@ -477,33 +398,32 @@ search_page <-
               
               # 4. Submit Button
               shiny::actionButton(
-                "submit_btn", 
-                "Submit", 
+                "submit_btn",
+                "Submit",
                 class = "btn-primary mt-3"),
               htmltools::div(style = "margin-top: 80px;"),
               htmltools::div(
-                 shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>.")),
+                style = "max-width: 800px, width: 100%",
+                shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>.")),
               htmltools::div(style = "margin-top: 30px;")
             )
           )
         ),
         autodry_footer
       )
-  ))
+    ))
 
-close_dn_js0 <- 
+close_navbar_dropdown_js <-
   shiny::tags$script("
-        Shiny.addCustomMessageHandler(
-          'toggleDropdown',
-          function toggleDropdown(msg) {
-            $('.dropdown-menu').removeClass('show')
-          });
-        "
-  )
+    Shiny.addCustomMessageHandler(
+        'toggleDropdown',
+        function toggleDropdown(msg) {
+          $('.dropdown-menu').removeClass('show')
+        });
+      ")
 
-detect_browser_js <- 
-  shiny::tags$script(
-  shiny::HTML("
+detect_browser_js <-
+  shiny::tags$script(shiny::HTML("
     Shiny.addCustomMessageHandler('getBrowserInfo', function(message) {
       var userAgent = navigator.userAgent;
       var browser = 'Unknown';
@@ -520,33 +440,27 @@ detect_browser_js <-
     });
   "))
 
-ui_original <- 
+ui_original <-
   bslib::page_navbar(
     id = "main_nav",
     header = htmltools::tags$head(
-      close_dn_js0,
+      close_navbar_dropdown_js,
       detect_browser_js,
-      #shiny::includeHTML("google_analytics.html"),
-      htmltools::tags$script(
-        shiny::HTML(
-        "Shiny.addCustomMessageHandler('getUserAgent', function(message) {
-          Shiny.setInputValue('client_browser', navigator.userAgent);
-        });")),
       htmltools::tags$link(rel="shortcut icon", href="favicon-ous.svg")),
     navbar_options = bslib::navbar_options(
       bg = "#593196",
     ),
     #fillable_mobile = TRUE,
     theme = bslib::bs_theme(
-      bootswatch = "pulse", 
+      bootswatch = "pulse",
       version = 5,
       "dropdown-menu-bg" = "#fff") |>
       bslib::bs_add_rules(
         list(
           ".navbar {padding-left: 20px; padding-right: 20px;}",
           ".nav.navbar-nav {
-              font-size:1.2em; 
-              background-color: $primary !important; 
+              font-size:1.2em;
+              background-color: $primary !important;
               color: #ffffff !important;
            }",
           ".navbar-nav .dropdown-menu {
@@ -568,29 +482,29 @@ ui_original <-
     search_page,
     bslib::nav_menu(
       title = "Data Explorer",
-      bslib::nav_panel(title = "Response kinetics - single", 
+      bslib::nav_panel(title = "Response kinetics - single",
                        fill = TRUE,
-                       value = "arkin_single_view",
-                       autodry_response_ui[['single']]),
-      bslib::nav_panel(title = "Response kinetics - global", 
+                       value = "kinresp_single_view",
+                       autodry_kinresp_ui[['single']]),
+      bslib::nav_panel(title = "Response kinetics - global",
                        fill = TRUE,
-                       value = "arkin_global_view",
-                       autodry_response_ui[['global']]),
-      bslib::nav_panel(title = "Autophagy competence - single", 
+                       value = "kinresp_global_view",
+                       autodry_kinresp_ui[['global']]),
+      bslib::nav_panel(title = "Autophagy competence - single",
                        fill = TRUE,
                        value = "acomp_single_view",
                        autodry_competence_ui[['single']]),
-      bslib::nav_panel(title = "Autophagy competence - global", 
+      bslib::nav_panel(title = "Autophagy competence - global",
                        fill = TRUE,
                        value = "acomp_global_view",
-                      autodry_competence_ui[['global']])
+                       autodry_competence_ui[['global']])
     ),
     bslib::nav_menu(
       title = "Documentation",
       bslib::nav_panel(title = "About the study", fill = TRUE, about_page),
       bslib::nav_panel(title = "Portal usage", fill = TRUE, docs_page)
     ),
-                    
+    
     bslib::nav_panel(title = htmltools::span(
       "DISCLAIMER", style="padding-right:10px;"),
       disclaimer_page)
@@ -598,89 +512,177 @@ ui_original <-
 
 ## Shiny server functions
 server <- function(input, output, session) {
-
+  
   #user_browser <- reactiveVal()
   selected_gene <- shiny::reactiveVal()
-
+  
+  ### BROWSER DETECTION ###
+  
   observe({
     session$sendCustomMessage("getBrowserInfo", list())
   })
   
-  filtered_genes <- shiny::reactive({
+  browser_type <- reactiveVal("Unknown")
+  
+  observeEvent(input$client_browser, {
+    if (grepl("safari", tolower(input$client_browser))
+        && !grepl("chrome", tolower(input$client_browser))) {
+      browser_type("Safari")
+    } else {
+      browser_type("Non-Safari")
+    }
+  })
+  
+  output$isSafari <- reactive({
+    browser_type() == "Safari"
+  })
+  outputOptions(output, "isSafari", suspendWhenHidden = FALSE)
+  
+  
+  #### MAIN UI LOGIC - ANY BROWSER TYPE ####
+  
+  filtered_genes_main <- shiny::reactive({
     req(nchar(input$gene_search_input) >= 2)
     matches <- grep(
-      input$gene_search_input, 
-      main_gene_ids$orf_gene_id, 
-      ignore.case = TRUE, 
+      input$gene_search_input,
+      main_gene_ids$orf_gene_id,
+      ignore.case = TRUE,
       value = TRUE)
-    head(matches, 50)  # limit suggestions for performance
+    head(matches, 80)  # limit suggestions for performance
   })
   
   # Render selectInput dynamically once user types enough
   output$gene_mutant_suggestions <- shiny::renderUI({
     if (nchar(input$gene_search_input) < 2) return(NULL)
     
-    choices <- filtered_genes()
+    choices <- filtered_genes_main()
     if (length(choices) == 0) return("No matches found.")
     
+    cat("Browser: ", input$client_browser, " - ", browser_type(), "\n")
+    
     shiny::selectInput(
-      "main_gene_search", 
-      "Select a match in the list to explore different views of autophagy dynamics:", 
-      choices = choices, 
+      "main_gene_search",
+      "Select a match in the list to explore different views of autophagy dynamics:",
+      choices = choices,
       multiple = FALSE,
-      width = "100%", selectize = F)
+      width = "100%",
+      selectize = F)
   })
   
+  ### KINETIC RESPONSE SINGLE VIEW UI LOGIC ###
   
-  # output$conditional_main_select <- shiny::renderUI({
-  #   req(input$client_browser)
-  #   #cat(input$client_browser,"\n")
-  #   if (input$client_browser == "Safari") {
-  #     shiny::textInput(
-  #       "gene_search_input", 
-  #       "Search for yeast gene/ORF mutant to explore different views of autophagy dynamics:", 
-  #       "")
-  #     shiny::uiOutput(gene_mutant_suggestions)
-  #   } else {
-  #     shiny::selectizeInput(
-  #       "main_gene_search", 
-  #       "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics", 
-  #       choices = NULL, 
-  #       options = list(
-  #         maxOptions = 5500     # Set this to your max or desired number
-  #       ),
-  #       width = "100%")
-  #   }
-  # })
+  filtered_genes_kinresp_single <- shiny::reactive({
+    req(nchar(input$gene_search_input_kinresp_single) >= 2)
+    matches <- grep(
+      input$gene_search_input_kinresp_single,
+      main_gene_ids$orf_gene_id,
+      ignore.case = TRUE,
+      value = TRUE)
+    head(matches, 80)  # limit suggestions for performance
+  })
+  
+  # Render selectInput dynamically once user types enough
+  output$gene_mutant_suggestions_kinresp_single <- shiny::renderUI({
+    if (nchar(input$gene_search_input_kinresp_single) < 2) return(NULL)
+    
+    choices_RK1 <- filtered_genes_kinresp_single()
+    if (length(choices_RK1) == 0) return("No matches found.")
+    
+    shiny::selectInput(
+      "gene_id_kinresp_single",
+      "Chosen gene/ORF:",
+      choices = choices_RK1,
+      multiple = FALSE,
+      width = "100%",
+      selectize = F)
+  })
+  
+  #### AUTOPHAGY COMPETENCE SINGLE VIEW UI LOGIC ####
+  
+  filtered_genes_acomp_single <- shiny::reactive({
+    req(nchar(input$gene_search_input_acomp_single) >= 2)
+    matches <- grep(
+      input$gene_search_input_acomp_single,
+      main_gene_ids$orf_gene_id,
+      ignore.case = TRUE,
+      value = TRUE)
+    head(matches, 80)  # limit suggestions for performance
+  })
+  
+  # Render selectInput dynamically once user types enough
+  output$gene_mutant_suggestions_acomp_single <- shiny::renderUI({
+    if (nchar(input$gene_search_input_acomp_single) < 2) return(NULL)
+    
+    choices_AC1 <- filtered_genes_acomp_single()
+    if (length(choices_AC1) == 0) return("No matches found.")
+    
+    #cat("Browser: ", input$client_browser, " - ", browser_type(), "\n")
+    
+    shiny::selectInput(
+      "gene_id_acomp_single",
+      "Chosen gene/ORF:",
+      choices = choices_AC1,
+      multiple = FALSE,
+      width = "100%",
+      selectize = F)
+  })
+  
   
   shiny::observeEvent(input$submit_btn, {
     selected_gene(input$main_gene_search)
     
     # Switch to appropriate nav_panel based on selected analysis view
-    target_panel <- switch(
-      input$analysis_view,
-      "arkin_single" = "arkin_single_view",
-      "arkin_global"  = "arkin_global_view",
-      "acomp_single" = "acomp_single_view",
-      "acomp_global" = "acomp_global_view")
+    target_panel <- NULL
+    if (input$client_browser != "Safari"){
+      target_panel <- switch(
+        input$analysis_view,
+        "kinresp_single" = "kinresp_single_view",
+        "kinresp_global" = "kinresp_global_view",
+        "acomp_single" = "acomp_single_view",
+        "acomp_global" = "acomp_global_view")
+    }else{
+      target_panel <- switch(
+        input$analysis_view_safari,
+        "kinresp_single" = "kinresp_single_view",
+        "acomp_single" = "acomp_single_view")
+    }
     
+    cat(input$client_browser, "\t",
+        "Switching to panel:", target_panel, "\n")
     # Change page programmatically using bslib’s update_navs
     shiny::updateNavbarPage(
-      inputId = "main_nav", 
+      inputId = "main_nav",
       selected = target_panel)
     
     # Update the corresponding selectizeInput in the selected panel
-    shiny::updateSelectizeInput(
-      session, 
-      paste0("gene_id_", input$analysis_view),
-      selected = input$main_gene_search)
+    if (input$client_browser != "Safari"){
+      #cat("Non-Safari\tupdating ", paste0("gene_id_", input$analysis_view), "\n")
+      shiny::updateSelectizeInput(
+        session,
+        paste0("gene_id_", input$analysis_view),
+        selected = input$main_gene_search)
+    }
+    else {
+      shiny::updateTextInput(
+        session,
+        inputId = paste0("gene_search_input_",input$analysis_view_safari),
+        value = input$gene_search_input
+      )
+      
+      shiny::updateSelectInput(
+        session,
+        inputId = paste0("gene_id_", input$analysis_view_safari),
+        choices = input$main_gene_search,
+        selected = input$main_gene_search
+      )
+    }
     
   })
   
   shiny::observe({
-    if (input$main_nav %in% "arkin_single_view" || 
-        input$main_nav %in% "arkin_global_view" || 
-        input$main_nav %in% "acomp_single_view" || 
+    if (input$main_nav %in% "kinresp_single_view" ||
+        input$main_nav %in% "kinresp_global_view" ||
+        input$main_nav %in% "acomp_single_view" ||
         input$main_nav %in% "acomp_global_view") {
       session$sendCustomMessage(
         type = "toggleDropdown",
@@ -695,15 +697,15 @@ server <- function(input, output, session) {
   
   ## these should be initialized
   ac_global_init[['Positions']] <- c()
-  ac_global_init[['mat']] <- 
+  ac_global_init[['mat']] <-
     gw_autoph_competence_data[['bf_overall']] |>
     as.data.frame()
   
   ac_global_init[['mat']]$Type <- gw_autoph_type_data$Type[match(
-    paste(ac_global_init[['mat']]$Gene, 
+    paste(ac_global_init[['mat']]$Gene,
           ac_global_init[['mat']]$ORF),paste(
-      gw_autoph_type_data$Gene,
-      gw_autoph_type_data$ORF))]
+            gw_autoph_type_data$Gene,
+            gw_autoph_type_data$ORF))]
   
   ac_global_init$mat$Type[which(ac_global_init$mat$Plate_controls == "+")] <-
     "KO"
@@ -711,7 +713,7 @@ server <- function(input, output, session) {
     "WT"
   
   ac_global_init[['mat_select']] <- data.frame()
-  ac_global_init[['mat_select']] <- 
+  ac_global_init[['mat_select']] <-
     gw_autoph_competence_data[['bf_overall']] |>
     subset(paste(Plate, Position) %in% ac_global_init$Positions) |>
     as.data.frame()
@@ -719,102 +721,93 @@ server <- function(input, output, session) {
   
   ac_global_init[['X']] <- BF_variables[1]
   ac_global_init[['Y']] <- BF_variables[1]
-  ac_global_init[['lab_x']] <- 
+  ac_global_init[['lab_x']] <-
     paste0("<br><b>Overall autophagy</b><br><br>",
            "<i>log BF (WT:ATG1)</i>")
-  ac_global_init[['lab_y']] <- 
+  ac_global_init[['lab_y']] <-
     paste0("<br><b>Overall autophagy</b><br><br>",
            "<i>log BF (WT:ATG1)</i>")
   
   ac_global_state <- ac_global_init
   
   Value <- "Value"
-  arkin_global_init <- list()
-  arkin_global_init[['Value']] <- Value
-  arkin_global_init[['X']] = "T50 +N"
-  arkin_global_init[['Y']] = "T50 -N"
-  arkin_global_init[['Positions']] <- c()
-  arkin_global_init[['mat']] <- as.data.frame(
-      gw_autoph_response_data[['ds_parms']] |> 
-        dplyr::filter(
-          .data$Parameter %in% 
-            c(arkin_global_init[['X']],
-              arkin_global_init[['Y']])) |> 
-        dplyr::select(c("Plate","Position","ORF",
-                        "Gene","primary_identifier",
-                        "Reference_sets",
-                        "Parameter",
-                        rlang::sym(Value))) |> 
-        tidyr::pivot_wider(
-          names_from = Parameter, 
-          values_from = Value))
-  arkin_global_init[['mat']]$X <- 
-    arkin_global_init[['mat']][, arkin_global_init[['X']]]
-  arkin_global_init[['mat']]$Y <- 
-    arkin_global_init[['mat']][, arkin_global_init[['Y']]]
-  arkin_global_init[['mat_select']] <- data.frame()
+  kinresp_global_init <- list()
+  kinresp_global_init[['Value']] <- Value
+  kinresp_global_init[['X']] = "T50 +N"
+  kinresp_global_init[['Y']] = "T50 -N"
+  kinresp_global_init[['Positions']] <- c()
+  kinresp_global_init[['mat']] <- as.data.frame(
+    gw_autoph_response_data[['ds_parms']] |>
+      dplyr::filter(
+        .data$Parameter %in%
+          c(kinresp_global_init[['X']],
+            kinresp_global_init[['Y']])) |>
+      dplyr::select(c("Plate","Position","ORF",
+                      "Gene","primary_identifier",
+                      "Reference_sets",
+                      "Parameter",
+                      rlang::sym(Value))) |>
+      tidyr::pivot_wider(
+        names_from = Parameter,
+        values_from = Value))
+  kinresp_global_init[['mat']]$X <-
+    kinresp_global_init[['mat']][, kinresp_global_init[['X']]]
+  kinresp_global_init[['mat']]$Y <-
+    kinresp_global_init[['mat']][, kinresp_global_init[['Y']]]
+  kinresp_global_init[['mat_select']] <- data.frame()
   
-  arkin_global_state <- arkin_global_init
-  
-  # observeEvent(input$client_browser, {
-  #   if (input$client_browser != "Safari") {
-  #     shiny::updateSelectizeInput(
-  #       session, "main_gene_search",
-  #       choices = main_gene_ids$orf_gene_id,
-  #       server = TRUE)
-  #   }
-  # })
+  kinresp_global_state <- kinresp_global_init
   
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
-        session, "gene_id_arkin_single",
+        session, "gene_id_kinresp_single",
         choices = gw_autoph_response_data$gene_info_kinetic$orf_gene_id,
         server = TRUE)
     }
   })
-    
+  
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
-        session, "gene_id_arkin_global",
+        session, "gene_id_kinresp_global",
         selected = "AAC1 / YMR056C",
         choices = gw_autoph_response_data$gene_info_kinetic_multi$orf_gene_id,
         server = TRUE)
     }
   })
-      
+  
   # Dynamically show plot or warning
-  output$arkin_warning <- shiny::renderUI({
-    if (is.null(input$gene_id_arkin_single) || input$gene_id_arkin_single == "") {
+  output$kinresp_warning <- shiny::renderUI({
+    if (is.null(input$gene_id_kinresp_single) || input$gene_id_kinresp_single == "") {
       div(
         style = "color: red; font-weight: bold;",
         "⚠️ Please select a gene/ORF mutant to visualize the autophagy response kinetics."
       )
     } else {
-      shiny::plotOutput("arkin", height = "100%")
+      shiny::plotOutput("kinresp", height = "100%")
     }
   })
   
-  output$arkin <- shiny::renderPlot({
-    req(input$gene_id_arkin_single)
-    plot_response_kinetics(
-      response_data = gw_autoph_response_data$per_ko[[input$gene_id_arkin_single]])
+  output$kinresp <- shiny::renderPlot({
+    req(input$gene_id_kinresp_single)
+    plot_kinetic_response(
+      response_data = gw_autoph_response_data$per_ko[[input$gene_id_kinresp_single]])
   })
-
-  output$arkin_global <- shiny::renderPlot({
-    req(arkin_global_state_mat())
-    req(arkin_global_state_mat_select())
-    req(arkin_global_XY_vars())
+  
+  output$kinresp_global <- shiny::renderPlot({
+    req(kinresp_global_state_mat())
+    req(kinresp_global_state_mat_select())
+    req(kinresp_global_XY_vars())
     
-    plot_response_kinetics_global(
-      mat = arkin_global_state_mat(),
-      mat_select = arkin_global_state_mat_select(),
-      X = arkin_global_XY_vars()[['X']],
-      Y = arkin_global_XY_vars()[['Y']],
+    plot_kinetic_response_global(
+      mat = kinresp_global_state_mat(),
+      mat_select = kinresp_global_state_mat_select(),
+      X = kinresp_global_XY_vars()[['X']],
+      Y = kinresp_global_XY_vars()[['Y']],
       show_library_type_contour = input$contour)
   })
-
+  
   output$acomp_global <- shiny::renderPlot({
     req(acomp_global_state_selected())
     req(acomp_global_state_library_adjustment())
@@ -825,7 +818,7 @@ server <- function(input, output, session) {
       ac_multi_data = ac_global_state,
       show_library_type_contour = input$bf_contour)
   })
-
+  
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
@@ -837,7 +830,7 @@ server <- function(input, output, session) {
     }
   })
   
-  shiny::observeEvent(input$client_browser, { 
+  shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
         session, "gene_id_acomp_single",
@@ -862,21 +855,21 @@ server <- function(input, output, session) {
   output$acomp <- shiny::renderPlot({
     req(input$gene_id_acomp_single)
     plot_autophagy_competence(
-      competence_data = 
+      competence_data =
         gw_autoph_competence_data$per_ko[[input$gene_id_acomp_single]])
   })
-
+  
   output$selected_gene_kinetic <- shiny::renderText({
     response_data <-
-      gw_autoph_response_data$per_ko[[input$gene_id_arkin_single]]
+      gw_autoph_response_data$per_ko[[input$gene_id_kinresp_single]]
     library_type <- ""
     if("slibrary" %in% names(response_data)){
       library_type <- response_data$slibrary
     }
     paste("Autophagy response kinetics -",
-          input$gene_id_arkin_single, library_type)
+          input$gene_id_kinresp_single, library_type)
   })
-
+  
   output$selected_gene_bf <- shiny::renderText({
     competence_data = gw_autoph_competence_data$per_ko[[input$gene_id_acomp_single]]
     library_type <- ""
@@ -886,10 +879,10 @@ server <- function(input, output, session) {
     paste("Autophagy competence -",
           input$gene_id_acomp_single, library_type)
   })
-
+  
   output$gene_info_kinetic <- shiny::renderUI({
     ginf <- show_gene_info(
-      primary_id = input$gene_id_arkin_single,
+      primary_id = input$gene_id_kinresp_single,
       gene_info = gw_autoph_response_data$gene_info_kinetic
     )
     shiny::HTML(
@@ -902,7 +895,7 @@ server <- function(input, output, session) {
       "when hovering the mouse in the bottom right corner of the plot </li>",
       "</ul></div>")
   })
-
+  
   output$gene_info_bf <- shiny::renderUI({
     ginf <- show_gene_info(
       primary_id = input$gene_id_acomp_single,
@@ -938,24 +931,24 @@ server <- function(input, output, session) {
     
     if(grepl("VAM6.ATG1", ac[['X']], fixed = T)){
       ac[['lab_x']] <- paste0("<br><b>Autophagosome formation</b><br><br>",
-                      "<i>log BF (VAM6:ATG1)</i>")
+                              "<i>log BF (VAM6:ATG1)</i>")
     }else if(grepl("WT.ATG1", ac[['X']], fixed = T)){
       ac[['lab_x']] <- paste0("<br><b>Overall autophagy</b><br><br>",
-                      "<i>log BF (WT:ATG1)</i>")
+                              "<i>log BF (WT:ATG1)</i>")
     }else{
       ac[['lab_x']] <- paste0("<br><b>Autophagosome clearance</b><br><br>",
-                      "<i>log BF (WT:VAM6)</i>")
+                              "<i>log BF (WT:VAM6)</i>")
     }
     if(grepl("VAM6.ATG1", ac[['Y']], fixed = T)){
       ac[['lab_y']] <- paste0("<b>Autophagosome formation</b><br><br>",
-                      "<i>log BF (VAM6:ATG1)</i><br>")
+                              "<i>log BF (VAM6:ATG1)</i><br>")
       
     }else if(grepl("WT.ATG1", ac[['Y']], fixed = T)){
       ac[['lab_y']] <- paste0("<b>Overall autophagy</b><br><br>",
-                      "<i>log BF (WT:ATG1)</i><br>")
+                              "<i>log BF (WT:ATG1)</i><br>")
     }else{
       ac[['lab_y']] <- paste0("<b>Autophagosome clearance</b><br><br>",
-                      "<i>log BF (WT:VAM6)</i><br>")
+                              "<i>log BF (WT:VAM6)</i><br>")
     }
     
     return(ac)
@@ -963,7 +956,6 @@ server <- function(input, output, session) {
   })
   
   acomp_global_state_selected <- reactive ({
-    #req(input$gene_id_bf_multiple)
     Positions <- c()
     for(i in input$gene_id_acomp_global){
       BF_response <- gw_autoph_competence_data[['bf_temporal']] |>
@@ -998,7 +990,7 @@ server <- function(input, output, session) {
   })
   
   acomp_global_state_library_adjustment <- reactive({
-
+    
     # Library adjustment for BF data
     req(acomp_global_state_vars())
     ## 1) We standardize the distributions of KO, DAmP and WT populations
@@ -1011,7 +1003,7 @@ server <- function(input, output, session) {
     ac_global_state[['Y']] <- ac_vars[['Y']]
     ac_global_state[['lab_x']] <- ac_vars[['lab_x']]
     ac_global_state[['lab_y']] <- ac_vars[['lab_y']]
-
+    
     X <- ac_global_state$X
     Y <- ac_global_state$Y
     mat <- ac_global_state$mat
@@ -1032,12 +1024,12 @@ server <- function(input, output, session) {
           mean_y = mean(mean_y, na.rm = T),
           sd_x = mean(sd_x, na.rm = T),
           sd_y = mean(sd_y, na.rm = T))
-
+      
       mat$Type[which(mat$Plate_controls == "+")] <-
         "KO"
       mat$Type[which(mat$Plate_controls == "+" & is.na(mat$ORF))] <-
         "WT"
-
+      
       mat_wt <- mat[which(mat$Plate_controls == "+" & is.na(mat$ORF)),] |>
         dplyr::mutate(
           mean_x = mean(!!rlang::sym(X)),
@@ -1059,7 +1051,7 @@ server <- function(input, output, session) {
       #keep SD unchanged for the WT, i.e. only change mean
       mat_wt[1,4:5] <- mat_wt[1,8:9]
       mat_lib <- rbind(mat_lib, mat_wt)
-
+      
       mat[,X] <-  mat[,X] +
         (mat_lib$mean_x-mat_lib$mean_type_x)[match(mat$Type,mat_lib$Type)]
       mat[,Y] <- mat[,Y] +
@@ -1071,21 +1063,21 @@ server <- function(input, output, session) {
       
       ac_global_state$mat <- mat
     }
-
+    
     return(ac_global_state)
-
+    
   })
   
-  arkin_global_XY_vars <- reactive({
+  kinresp_global_XY_vars <- reactive({
     req(input$x_var_kin)
     req(input$y_var_kin)
     return(list('X' = input$x_var_kin,'Y' = input$y_var_kin))
   })
   
-  arkin_global_state_selected <- reactive({
-    req(input$gene_id_arkin_global)
+  kinresp_global_state_selected <- reactive({
+    req(input$gene_id_kinresp_global)
     Positions <- c()
-    for(i in input$gene_id_arkin_global){
+    for(i in input$gene_id_kinresp_global){
       y_pred <- gw_autoph_response_data[['ds_curvefits']] |>
         dplyr::filter(primary_identifier == i)
       
@@ -1098,7 +1090,7 @@ server <- function(input, output, session) {
         dplyr::mutate(d = abs(P1_30_fit-median(P1_30_fit))) |>
         dplyr::group_by(Plate, Position) |>
         dplyr::mutate(d = mean(d))
-  
+      
       y_pred <- y_pred[which(y_pred$d==min(y_pred$d)),]
       Positions <- c(
         Positions, paste(y_pred$Plate, y_pred$Position)[1])
@@ -1106,7 +1098,7 @@ server <- function(input, output, session) {
     return(Positions)
   })
   
-  arkin_global_normalized_vals <- reactive({
+  kinresp_global_normalized_vals <- reactive({
     if(input$use_perturbation_data == T){
       return(TRUE)
     }else{
@@ -1114,29 +1106,29 @@ server <- function(input, output, session) {
     }
   })
   
-  arkin_global_state_mat_select <- reactive({
-    #req(arkin_global_XY_vars())
-    req(arkin_global_state_selected())
-    #req(arkin_global_normalized_vals())
+  kinresp_global_state_mat_select <- reactive({
+    #req(kinresp_global_XY_vars())
+    req(kinresp_global_state_selected())
+    #req(kinresp_global_normalized_vals())
     
     Value <- "Value"
-    if(arkin_global_normalized_vals() == T){
+    if(kinresp_global_normalized_vals() == T){
       Value <- "Perturbation"
     }
-    X <- arkin_global_XY_vars()[['X']]
-    Y <- arkin_global_XY_vars()[['Y']]
-    Positions <- 
-      arkin_global_state_selected()
+    X <- kinresp_global_XY_vars()[['X']]
+    Y <- kinresp_global_XY_vars()[['Y']]
+    Positions <-
+      kinresp_global_state_selected()
     mat_select <- data.frame()
     if(length(Positions) > 0){
       
       mat_select <- as.data.frame(
         gw_autoph_response_data[['ds_parms_comb']] |>
           dplyr::filter(
-            paste(.data$Plate, .data$Position) %in% 
+            paste(.data$Plate, .data$Position) %in%
               Positions) |>
           dplyr::filter(
-            .data$Parameter %in% 
+            .data$Parameter %in%
               c(X, Y)) |>
           dplyr::select(
             c("Plate","Position","ORF",
@@ -1145,13 +1137,13 @@ server <- function(input, output, session) {
               "Parameter",
               rlang::sym(Value))) |>
           tidyr::pivot_wider(
-            names_from = Parameter, 
+            names_from = Parameter,
             values_from = Value)
       )
       
-      mat_select$X <- 
+      mat_select$X <-
         mat_select[,X]
-      mat_select$Y <- 
+      mat_select$Y <-
         mat_select[,Y]
     }
     return(mat_select)
@@ -1159,51 +1151,43 @@ server <- function(input, output, session) {
     
   })
   
-  arkin_global_state_mat <- reactive({
-    req(arkin_global_XY_vars())
-
-    arkin_data <- list()
-    arkin_data[['Value']] <- arkin_global_state[['Value']]
-    arkin_data[['X']] <-
-      arkin_global_XY_vars()[['X']]
-    arkin_data[['Y']] <-
-      arkin_global_XY_vars()[['Y']]
+  kinresp_global_state_mat <- reactive({
+    req(kinresp_global_XY_vars())
+    
+    kinresp_data <- list()
+    kinresp_data[['Value']] <- kinresp_global_state[['Value']]
+    kinresp_data[['X']] <-
+      kinresp_global_XY_vars()[['X']]
+    kinresp_data[['Y']] <-
+      kinresp_global_XY_vars()[['Y']]
     
     mattype <- "raw"
-    if(arkin_global_normalized_vals() == T){
-      arkin_data[['Value']] <- "Perturbation"
+    if(kinresp_global_normalized_vals() == T){
+      kinresp_data[['Value']] <- "Perturbation"
       mattype <- "norm"
     }
     
-    # arkin_data[['mat']] <- 
-    #   gw_arkin_mats[[mattype]][gw_arkin_mats[[mattype]]$key == 
-    #                                          paste(arkin_data[['X']],
-    #                                                arkin_data[['Y']], sep="_"),] |>
-    #   tidyr::pivot_wider(
-    #     names_from = Parameter, 
-    #     values_from = arkin_data$Value)
-    
-    arkin_data[['mat']] <- as.data.frame(
+    kinresp_data[['mat']] <- as.data.frame(
       gw_autoph_response_data[['ds_parms']] |>
         dplyr::filter(
           .data$Parameter %in%
-            c(arkin_data[['X']],
-              arkin_data[['Y']])) |>
+            c(kinresp_data[['X']],
+              kinresp_data[['Y']])) |>
         dplyr::select(c("Plate","Position","ORF",
                         "Gene","primary_identifier",
                         "Reference_sets",
                         "Parameter",
-                        rlang::sym(arkin_data[['Value']]))) |>
+                        rlang::sym(kinresp_data[['Value']]))) |>
         tidyr::pivot_wider(
           names_from = Parameter,
-          values_from = arkin_data[['Value']]))
-
-    arkin_data[['mat']]$X <- 
-      arkin_data[['mat']][,arkin_data[['X']]]
-    arkin_data[['mat']]$Y <- 
-      arkin_data[['mat']][,arkin_data[['Y']]]
+          values_from = kinresp_data[['Value']]))
     
-    arkin_data[['mat']] <- arkin_data[['mat']] |>
+    kinresp_data[['mat']]$X <-
+      kinresp_data[['mat']][,kinresp_data[['X']]]
+    kinresp_data[['mat']]$Y <-
+      kinresp_data[['mat']][,kinresp_data[['Y']]]
+    
+    kinresp_data[['mat']] <- kinresp_data[['mat']] |>
       dplyr::left_join(
         gw_autoph_type_data |>
           dplyr::select(Gene, ORF, Type),
@@ -1212,9 +1196,8 @@ server <- function(input, output, session) {
       ) |>
       dplyr::distinct()
     
-    return(arkin_data$mat)
+    return(kinresp_data$mat)
     
-    #return(arkin_data)
   })
 }
 
