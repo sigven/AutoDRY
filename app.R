@@ -18,7 +18,7 @@ source('static_content.R')
 ##
 
 get_kinetic_response_params <- function(){
-  
+
   params <-
     c("Perturbation -N",
       "Perturbation +N",
@@ -39,7 +39,7 @@ get_kinetic_response_params <- function(){
       "Dynamic range -N",
       "Dynamic range +N")
   return(params)
-  
+
 }
 
 
@@ -158,7 +158,7 @@ autodry_competence_ui[['single']] <-
   bslib::layout_sidebar(
     fillable = TRUE,
     fill = TRUE,
-    
+
     sidebar = bslib::sidebar(
       shiny::conditionalPanel(
         condition = "!output.isSafari",
@@ -214,7 +214,7 @@ autodry_competence_ui[['global']] <-
           label = "Highlight gene/ORF mutants (max 10)",
           selected = "AAC1 / YMR056C",
           choices = NULL,
-          
+
           multiple = TRUE,
           options = list(
             maxOptions = 5500,     # Set this to your max or desired number
@@ -290,9 +290,9 @@ search_page <-
                 src = "Autodry_logo.png",
                 height = "150px",
                 style = "margin-bottom: 30px;"),
-              
+
               # 2. 2x2 Radio Grid
-              
+
               # shiny::conditionalPanel(
               #   condition = "!output.isSafari",
               #   htmltools::div(
@@ -380,7 +380,7 @@ search_page <-
                   )
                 )
               ),
-              
+
               shiny::textInput(
                 "gene_search_input",
                 "Search for yeast gene/ORF mutant",
@@ -395,7 +395,7 @@ search_page <-
               #    maxOptions = 5500     # Set this to your max or desired number
               #  ),
               #  width = "100%"),
-              
+
               # 4. Submit Button
               shiny::actionButton(
                 "submit_btn",
@@ -411,7 +411,7 @@ search_page <-
         ),
         autodry_footer
       )
-    ))
+  ))
 
 close_navbar_dropdown_js <-
   shiny::tags$script("
@@ -497,14 +497,14 @@ ui_original <-
       bslib::nav_panel(title = "Autophagy competence - global",
                        fill = TRUE,
                        value = "acomp_global_view",
-                       autodry_competence_ui[['global']])
+                      autodry_competence_ui[['global']])
     ),
     bslib::nav_menu(
       title = "Documentation",
       bslib::nav_panel(title = "About the study", fill = TRUE, about_page),
       bslib::nav_panel(title = "Portal usage", fill = TRUE, docs_page)
     ),
-    
+
     bslib::nav_panel(title = htmltools::span(
       "DISCLAIMER", style="padding-right:10px;"),
       disclaimer_page)
@@ -512,35 +512,35 @@ ui_original <-
 
 ## Shiny server functions
 server <- function(input, output, session) {
-  
+
   #user_browser <- reactiveVal()
   selected_gene <- shiny::reactiveVal()
-  
+
   ### BROWSER DETECTION ###
-  
+
   observe({
     session$sendCustomMessage("getBrowserInfo", list())
   })
-  
+
   browser_type <- reactiveVal("Unknown")
-  
+
   observeEvent(input$client_browser, {
     if (grepl("safari", tolower(input$client_browser))
-        && !grepl("chrome", tolower(input$client_browser))) {
+              && !grepl("chrome", tolower(input$client_browser))) {
       browser_type("Safari")
     } else {
       browser_type("Non-Safari")
     }
   })
-  
+
   output$isSafari <- reactive({
     browser_type() == "Safari"
   })
   outputOptions(output, "isSafari", suspendWhenHidden = FALSE)
-  
-  
+
+
   #### MAIN UI LOGIC - ANY BROWSER TYPE ####
-  
+
   filtered_genes_main <- shiny::reactive({
     req(nchar(input$gene_search_input) >= 2)
     matches <- grep(
@@ -550,16 +550,16 @@ server <- function(input, output, session) {
       value = TRUE)
     head(matches, 80)  # limit suggestions for performance
   })
-  
+
   # Render selectInput dynamically once user types enough
   output$gene_mutant_suggestions <- shiny::renderUI({
     if (nchar(input$gene_search_input) < 2) return(NULL)
-    
+
     choices <- filtered_genes_main()
     if (length(choices) == 0) return("No matches found.")
-    
+
     cat("Browser: ", input$client_browser, " - ", browser_type(), "\n")
-    
+
     shiny::selectInput(
       "main_gene_search",
       "Select a match in the list to explore different views of autophagy dynamics:",
@@ -568,9 +568,9 @@ server <- function(input, output, session) {
       width = "100%",
       selectize = F)
   })
-  
+
   ### KINETIC RESPONSE SINGLE VIEW UI LOGIC ###
-  
+
   filtered_genes_kinresp_single <- shiny::reactive({
     req(nchar(input$gene_search_input_kinresp_single) >= 2)
     matches <- grep(
@@ -580,14 +580,14 @@ server <- function(input, output, session) {
       value = TRUE)
     head(matches, 80)  # limit suggestions for performance
   })
-  
+
   # Render selectInput dynamically once user types enough
   output$gene_mutant_suggestions_kinresp_single <- shiny::renderUI({
     if (nchar(input$gene_search_input_kinresp_single) < 2) return(NULL)
-    
+
     choices_RK1 <- filtered_genes_kinresp_single()
     if (length(choices_RK1) == 0) return("No matches found.")
-    
+
     shiny::selectInput(
       "gene_id_kinresp_single",
       "Chosen gene/ORF:",
@@ -596,9 +596,9 @@ server <- function(input, output, session) {
       width = "100%",
       selectize = F)
   })
-  
+
   #### AUTOPHAGY COMPETENCE SINGLE VIEW UI LOGIC ####
-  
+
   filtered_genes_acomp_single <- shiny::reactive({
     req(nchar(input$gene_search_input_acomp_single) >= 2)
     matches <- grep(
@@ -608,16 +608,16 @@ server <- function(input, output, session) {
       value = TRUE)
     head(matches, 80)  # limit suggestions for performance
   })
-  
+
   # Render selectInput dynamically once user types enough
   output$gene_mutant_suggestions_acomp_single <- shiny::renderUI({
     if (nchar(input$gene_search_input_acomp_single) < 2) return(NULL)
-    
+
     choices_AC1 <- filtered_genes_acomp_single()
     if (length(choices_AC1) == 0) return("No matches found.")
-    
+
     #cat("Browser: ", input$client_browser, " - ", browser_type(), "\n")
-    
+
     shiny::selectInput(
       "gene_id_acomp_single",
       "Chosen gene/ORF:",
@@ -626,11 +626,11 @@ server <- function(input, output, session) {
       width = "100%",
       selectize = F)
   })
-  
-  
+
+
   shiny::observeEvent(input$submit_btn, {
     selected_gene(input$main_gene_search)
-    
+
     # Switch to appropriate nav_panel based on selected analysis view
     target_panel <- NULL
     if (input$client_browser != "Safari"){
@@ -646,14 +646,14 @@ server <- function(input, output, session) {
         "kinresp_single" = "kinresp_single_view",
         "acomp_single" = "acomp_single_view")
     }
-    
+
     cat(input$client_browser, "\t",
         "Switching to panel:", target_panel, "\n")
     # Change page programmatically using bslib’s update_navs
     shiny::updateNavbarPage(
       inputId = "main_nav",
       selected = target_panel)
-    
+
     # Update the corresponding selectizeInput in the selected panel
     if (input$client_browser != "Safari"){
       #cat("Non-Safari\tupdating ", paste0("gene_id_", input$analysis_view), "\n")
@@ -668,7 +668,7 @@ server <- function(input, output, session) {
         inputId = paste0("gene_search_input_",input$analysis_view_safari),
         value = input$gene_search_input
       )
-      
+
       shiny::updateSelectInput(
         session,
         inputId = paste0("gene_id_", input$analysis_view_safari),
@@ -676,9 +676,9 @@ server <- function(input, output, session) {
         selected = input$main_gene_search
       )
     }
-    
+
   })
-  
+
   shiny::observe({
     if (input$main_nav %in% "kinresp_single_view" ||
         input$main_nav %in% "kinresp_global_view" ||
@@ -689,36 +689,36 @@ server <- function(input, output, session) {
         message = list(msg = "hide dropdown"))
     }
   })
-  
+
   BF_variables <- colnames(
     gw_autoph_competence_data[['bf_overall']])[5:7]
-  
+
   ac_global_init <- list()
-  
+
   ## these should be initialized
   ac_global_init[['Positions']] <- c()
   ac_global_init[['mat']] <-
     gw_autoph_competence_data[['bf_overall']] |>
     as.data.frame()
-  
+
   ac_global_init[['mat']]$Type <- gw_autoph_type_data$Type[match(
     paste(ac_global_init[['mat']]$Gene,
           ac_global_init[['mat']]$ORF),paste(
-            gw_autoph_type_data$Gene,
-            gw_autoph_type_data$ORF))]
-  
+      gw_autoph_type_data$Gene,
+      gw_autoph_type_data$ORF))]
+
   ac_global_init$mat$Type[which(ac_global_init$mat$Plate_controls == "+")] <-
     "KO"
   ac_global_init$mat$Type[which(ac_global_init$mat$Plate_controls == "+" & is.na(ac_global_init$mat$ORF))] <-
     "WT"
-  
+
   ac_global_init[['mat_select']] <- data.frame()
   ac_global_init[['mat_select']] <-
     gw_autoph_competence_data[['bf_overall']] |>
     subset(paste(Plate, Position) %in% ac_global_init$Positions) |>
     as.data.frame()
-  
-  
+
+
   ac_global_init[['X']] <- BF_variables[1]
   ac_global_init[['Y']] <- BF_variables[1]
   ac_global_init[['lab_x']] <-
@@ -727,9 +727,9 @@ server <- function(input, output, session) {
   ac_global_init[['lab_y']] <-
     paste0("<br><b>Overall autophagy</b><br><br>",
            "<i>log BF (WT:ATG1)</i>")
-  
+
   ac_global_state <- ac_global_init
-  
+
   Value <- "Value"
   kinresp_global_init <- list()
   kinresp_global_init[['Value']] <- Value
@@ -737,27 +737,27 @@ server <- function(input, output, session) {
   kinresp_global_init[['Y']] = "T50 -N"
   kinresp_global_init[['Positions']] <- c()
   kinresp_global_init[['mat']] <- as.data.frame(
-    gw_autoph_response_data[['ds_parms']] |>
-      dplyr::filter(
-        .data$Parameter %in%
-          c(kinresp_global_init[['X']],
-            kinresp_global_init[['Y']])) |>
-      dplyr::select(c("Plate","Position","ORF",
-                      "Gene","primary_identifier",
-                      "Reference_sets",
-                      "Parameter",
-                      rlang::sym(Value))) |>
-      tidyr::pivot_wider(
-        names_from = Parameter,
-        values_from = Value))
+      gw_autoph_response_data[['ds_parms']] |>
+        dplyr::filter(
+          .data$Parameter %in%
+            c(kinresp_global_init[['X']],
+              kinresp_global_init[['Y']])) |>
+        dplyr::select(c("Plate","Position","ORF",
+                        "Gene","primary_identifier",
+                        "Reference_sets",
+                        "Parameter",
+                        rlang::sym(Value))) |>
+        tidyr::pivot_wider(
+          names_from = Parameter,
+          values_from = Value))
   kinresp_global_init[['mat']]$X <-
     kinresp_global_init[['mat']][, kinresp_global_init[['X']]]
   kinresp_global_init[['mat']]$Y <-
     kinresp_global_init[['mat']][, kinresp_global_init[['Y']]]
   kinresp_global_init[['mat_select']] <- data.frame()
-  
+
   kinresp_global_state <- kinresp_global_init
-  
+
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
@@ -766,7 +766,7 @@ server <- function(input, output, session) {
         server = TRUE)
     }
   })
-  
+
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
@@ -776,7 +776,7 @@ server <- function(input, output, session) {
         server = TRUE)
     }
   })
-  
+
   # Dynamically show plot or warning
   output$kinresp_warning <- shiny::renderUI({
     if (is.null(input$gene_id_kinresp_single) || input$gene_id_kinresp_single == "") {
@@ -788,18 +788,18 @@ server <- function(input, output, session) {
       shiny::plotOutput("kinresp", height = "100%")
     }
   })
-  
+
   output$kinresp <- shiny::renderPlot({
     req(input$gene_id_kinresp_single)
     plot_kinetic_response(
       response_data = gw_autoph_response_data$per_ko[[input$gene_id_kinresp_single]])
   })
-  
+
   output$kinresp_global <- shiny::renderPlot({
     req(kinresp_global_state_mat())
     req(kinresp_global_state_mat_select())
     req(kinresp_global_XY_vars())
-    
+
     plot_kinetic_response_global(
       mat = kinresp_global_state_mat(),
       mat_select = kinresp_global_state_mat_select(),
@@ -807,7 +807,7 @@ server <- function(input, output, session) {
       Y = kinresp_global_XY_vars()[['Y']],
       show_library_type_contour = input$contour)
   })
-  
+
   output$acomp_global <- shiny::renderPlot({
     req(acomp_global_state_selected())
     req(acomp_global_state_library_adjustment())
@@ -818,7 +818,7 @@ server <- function(input, output, session) {
       ac_multi_data = ac_global_state,
       show_library_type_contour = input$bf_contour)
   })
-  
+
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
@@ -829,7 +829,7 @@ server <- function(input, output, session) {
       )
     }
   })
-  
+
   shiny::observeEvent(input$client_browser, {
     if (input$client_browser != "Safari") {
       shiny::updateSelectizeInput(
@@ -838,8 +838,8 @@ server <- function(input, output, session) {
         server = TRUE)
     }
   })
-  
-  
+
+
   # Dynamically show plot or warning
   output$acomp_warning <- shiny::renderUI({
     if (is.null(input$gene_id_acomp_single) || input$gene_id_acomp_single == "") {
@@ -851,14 +851,14 @@ server <- function(input, output, session) {
       shiny::plotOutput("acomp", height = "100%")
     }
   })
-  
+
   output$acomp <- shiny::renderPlot({
     req(input$gene_id_acomp_single)
     plot_autophagy_competence(
       competence_data =
         gw_autoph_competence_data$per_ko[[input$gene_id_acomp_single]])
   })
-  
+
   output$selected_gene_kinetic <- shiny::renderText({
     response_data <-
       gw_autoph_response_data$per_ko[[input$gene_id_kinresp_single]]
@@ -869,7 +869,7 @@ server <- function(input, output, session) {
     paste("Autophagy response kinetics -",
           input$gene_id_kinresp_single, library_type)
   })
-  
+
   output$selected_gene_bf <- shiny::renderText({
     competence_data = gw_autoph_competence_data$per_ko[[input$gene_id_acomp_single]]
     library_type <- ""
@@ -879,7 +879,7 @@ server <- function(input, output, session) {
     paste("Autophagy competence -",
           input$gene_id_acomp_single, library_type)
   })
-  
+
   output$gene_info_kinetic <- shiny::renderUI({
     ginf <- show_gene_info(
       primary_id = input$gene_id_kinresp_single,
@@ -895,7 +895,7 @@ server <- function(input, output, session) {
       "when hovering the mouse in the bottom right corner of the plot </li>",
       "</ul></div>")
   })
-  
+
   output$gene_info_bf <- shiny::renderUI({
     ginf <- show_gene_info(
       primary_id = input$gene_id_acomp_single,
@@ -909,7 +909,7 @@ server <- function(input, output, session) {
       "when hovering the mouse in the bottom right corner of the plot </li>",
       "</ul></div>")
   })
-  
+
   acomp_global_state_vars <- reactive({
     req(input$bf_x_var)
     req(input$bf_y_var)
@@ -928,33 +928,33 @@ server <- function(input, output, session) {
     if(input$bf_y_var == "Autophagosome clearance"){
       ac[['Y']] <- BF_variables[2]
     }
-    
+
     if(grepl("VAM6.ATG1", ac[['X']], fixed = T)){
       ac[['lab_x']] <- paste0("<br><b>Autophagosome formation</b><br><br>",
-                              "<i>log BF (VAM6:ATG1)</i>")
+                      "<i>log BF (VAM6:ATG1)</i>")
     }else if(grepl("WT.ATG1", ac[['X']], fixed = T)){
       ac[['lab_x']] <- paste0("<br><b>Overall autophagy</b><br><br>",
-                              "<i>log BF (WT:ATG1)</i>")
+                      "<i>log BF (WT:ATG1)</i>")
     }else{
       ac[['lab_x']] <- paste0("<br><b>Autophagosome clearance</b><br><br>",
-                              "<i>log BF (WT:VAM6)</i>")
+                      "<i>log BF (WT:VAM6)</i>")
     }
     if(grepl("VAM6.ATG1", ac[['Y']], fixed = T)){
       ac[['lab_y']] <- paste0("<b>Autophagosome formation</b><br><br>",
-                              "<i>log BF (VAM6:ATG1)</i><br>")
-      
+                      "<i>log BF (VAM6:ATG1)</i><br>")
+
     }else if(grepl("WT.ATG1", ac[['Y']], fixed = T)){
       ac[['lab_y']] <- paste0("<b>Overall autophagy</b><br><br>",
-                              "<i>log BF (WT:ATG1)</i><br>")
+                      "<i>log BF (WT:ATG1)</i><br>")
     }else{
       ac[['lab_y']] <- paste0("<b>Autophagosome clearance</b><br><br>",
-                              "<i>log BF (WT:VAM6)</i><br>")
+                      "<i>log BF (WT:VAM6)</i><br>")
     }
-    
+
     return(ac)
-    
+
   })
-  
+
   acomp_global_state_selected <- reactive ({
     Positions <- c()
     for(i in input$gene_id_acomp_global){
@@ -981,29 +981,29 @@ server <- function(input, output, session) {
       Positions <-
         c(Positions,paste(BF_response$Plate, BF_response$Position)[1])
     }
-    
+
     mat_select <- gw_autoph_competence_data[['bf_overall']] |>
       subset(paste(Plate, Position) %in% Positions) |>
       as.data.frame()
-    
+
     return(mat_select)
   })
-  
+
   acomp_global_state_library_adjustment <- reactive({
-    
+
     # Library adjustment for BF data
     req(acomp_global_state_vars())
     ## 1) We standardize the distributions of KO, DAmP and WT populations
     ##    to have equal mean and variance.
     ## 2) We cannot assume that the variance is the same for WT and
     ##    mutant distributions so we ensure that the sd is unchanged.
-    
+
     ac_vars <- acomp_global_state_vars()
     ac_global_state[['X']] <- ac_vars[['X']]
     ac_global_state[['Y']] <- ac_vars[['Y']]
     ac_global_state[['lab_x']] <- ac_vars[['lab_x']]
     ac_global_state[['lab_y']] <- ac_vars[['lab_y']]
-    
+
     X <- ac_global_state$X
     Y <- ac_global_state$Y
     mat <- ac_global_state$mat
@@ -1024,12 +1024,12 @@ server <- function(input, output, session) {
           mean_y = mean(mean_y, na.rm = T),
           sd_x = mean(sd_x, na.rm = T),
           sd_y = mean(sd_y, na.rm = T))
-      
+
       mat$Type[which(mat$Plate_controls == "+")] <-
         "KO"
       mat$Type[which(mat$Plate_controls == "+" & is.na(mat$ORF))] <-
         "WT"
-      
+
       mat_wt <- mat[which(mat$Plate_controls == "+" & is.na(mat$ORF)),] |>
         dplyr::mutate(
           mean_x = mean(!!rlang::sym(X)),
@@ -1051,7 +1051,7 @@ server <- function(input, output, session) {
       #keep SD unchanged for the WT, i.e. only change mean
       mat_wt[1,4:5] <- mat_wt[1,8:9]
       mat_lib <- rbind(mat_lib, mat_wt)
-      
+
       mat[,X] <-  mat[,X] +
         (mat_lib$mean_x-mat_lib$mean_type_x)[match(mat$Type,mat_lib$Type)]
       mat[,Y] <- mat[,Y] +
@@ -1060,27 +1060,27 @@ server <- function(input, output, session) {
         ((mat_lib$sd_x/mat_lib$sd_type_x)[match(mat$Type,mat_lib$Type)])
       mat[,Y] <- mat[,Y] *
         ((mat_lib$sd_y/mat_lib$sd_type_y)[match(mat$Type,mat_lib$Type)])
-      
+
       ac_global_state$mat <- mat
     }
-    
+
     return(ac_global_state)
-    
+
   })
-  
+
   kinresp_global_XY_vars <- reactive({
     req(input$x_var_kin)
     req(input$y_var_kin)
     return(list('X' = input$x_var_kin,'Y' = input$y_var_kin))
   })
-  
+
   kinresp_global_state_selected <- reactive({
     req(input$gene_id_kinresp_global)
     Positions <- c()
     for(i in input$gene_id_kinresp_global){
       y_pred <- gw_autoph_response_data[['ds_curvefits']] |>
         dplyr::filter(primary_identifier == i)
-      
+
       #If mutant in rec plate, only evaluate rec mutants
       if(any(grepl("Rec",y_pred$Plate))){
         y_pred <- y_pred[which(grepl("Rec",y_pred$Plate)),]
@@ -1090,14 +1090,14 @@ server <- function(input, output, session) {
         dplyr::mutate(d = abs(P1_30_fit-median(P1_30_fit))) |>
         dplyr::group_by(Plate, Position) |>
         dplyr::mutate(d = mean(d))
-      
+
       y_pred <- y_pred[which(y_pred$d==min(y_pred$d)),]
       Positions <- c(
         Positions, paste(y_pred$Plate, y_pred$Position)[1])
     }
     return(Positions)
   })
-  
+
   kinresp_global_normalized_vals <- reactive({
     if(input$use_perturbation_data == T){
       return(TRUE)
@@ -1105,12 +1105,12 @@ server <- function(input, output, session) {
       return(FALSE)
     }
   })
-  
+
   kinresp_global_state_mat_select <- reactive({
     #req(kinresp_global_XY_vars())
     req(kinresp_global_state_selected())
     #req(kinresp_global_normalized_vals())
-    
+
     Value <- "Value"
     if(kinresp_global_normalized_vals() == T){
       Value <- "Perturbation"
@@ -1121,7 +1121,7 @@ server <- function(input, output, session) {
       kinresp_global_state_selected()
     mat_select <- data.frame()
     if(length(Positions) > 0){
-      
+
       mat_select <- as.data.frame(
         gw_autoph_response_data[['ds_parms_comb']] |>
           dplyr::filter(
@@ -1140,33 +1140,33 @@ server <- function(input, output, session) {
             names_from = Parameter,
             values_from = Value)
       )
-      
+
       mat_select$X <-
         mat_select[,X]
       mat_select$Y <-
         mat_select[,Y]
     }
     return(mat_select)
-    
-    
+
+
   })
-  
+
   kinresp_global_state_mat <- reactive({
     req(kinresp_global_XY_vars())
-    
+
     kinresp_data <- list()
     kinresp_data[['Value']] <- kinresp_global_state[['Value']]
     kinresp_data[['X']] <-
       kinresp_global_XY_vars()[['X']]
     kinresp_data[['Y']] <-
       kinresp_global_XY_vars()[['Y']]
-    
+
     mattype <- "raw"
     if(kinresp_global_normalized_vals() == T){
       kinresp_data[['Value']] <- "Perturbation"
       mattype <- "norm"
     }
-    
+
     kinresp_data[['mat']] <- as.data.frame(
       gw_autoph_response_data[['ds_parms']] |>
         dplyr::filter(
@@ -1181,12 +1181,12 @@ server <- function(input, output, session) {
         tidyr::pivot_wider(
           names_from = Parameter,
           values_from = kinresp_data[['Value']]))
-    
+
     kinresp_data[['mat']]$X <-
       kinresp_data[['mat']][,kinresp_data[['X']]]
     kinresp_data[['mat']]$Y <-
       kinresp_data[['mat']][,kinresp_data[['Y']]]
-    
+
     kinresp_data[['mat']] <- kinresp_data[['mat']] |>
       dplyr::left_join(
         gw_autoph_type_data |>
@@ -1195,9 +1195,9 @@ server <- function(input, output, session) {
         relationship = "many-to-many"
       ) |>
       dplyr::distinct()
-    
+
     return(kinresp_data$mat)
-    
+
   })
 }
 
