@@ -5,10 +5,6 @@ library(shiny)
 source('helpers.R')
 source('static_content.R')
 
-## Create UI elements
-
-#options(shiny.reactlog = TRUE)
-
 ## UI elements - Data Explorer (DE)
 ## - Menu
 ##  1) Response kinetics - single:  ("autodry_kinresp_ui[['single']]")
@@ -321,7 +317,7 @@ search_page <-
           htmltools::div(
             #class = "d-flex align-items-center justify-content-center",
             class = "d-flex flex-column align-items-center justify-content-between",
-            style = "min-height: 50vh; height: 100%; padding: 2rem;",
+            style = "min-height: 60vh; height: 100%; padding: 2rem;",
             htmltools::div(
               class = "text-center",
               style = "max-width: 600px; width: 100%;",
@@ -411,7 +407,7 @@ search_page <-
                 class = "btn-primary mt-3"),
               htmltools::div(style = "margin-top: 10px;")
             ),
-            htmltools::div(style = "flex-grow: 1;"),
+            #htmltools::div(style = "flex-grow: 1;"),
             htmltools::div(
               shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>."),
             ),
@@ -420,7 +416,7 @@ search_page <-
               htmltools::div(
                 class = "text-center",
                 style = "font-color: red; max-width: 900px; width: 100%;",
-                shiny::HTML("<br><br><i style='color:red'>WARNING: Data interaction works suboptimally with the Safari web browser - please consider using Chrome/Firefox/Edge/Brave when visiting AutoDRY</i>")
+                shiny::HTML("<br><br><i style='color:red'><b>WARNING</b>: Data interaction works suboptimally with the Safari web browser - please consider using Chrome/Firefox/Edge/Brave when visiting AutoDRY</i>")
               )
             ),
             htmltools::div(style = "margin-bottom: 20px;")
@@ -732,7 +728,14 @@ server <- function(input, output, session) {
     current <- selected_genes_kinresp_global()
     new_item <- input$match_select_kinresp_global
     if (!is.null(new_item) && !(new_item %in% current)) {
-      selected_genes_kinresp_global(c(current, new_item))
+      if(length(c(current,new_item)) <= 10){
+        selected_genes_kinresp_global(c(current, new_item))
+      }
+      else {
+        shiny::showNotification(
+          "A maximum of 10 genes/ORFs can be highlighted.",
+          type = "message")
+      }
     }
   })
   
@@ -786,7 +789,7 @@ server <- function(input, output, session) {
       }
       else {
         shiny::showNotification(
-          "Maximum of 10 genes/ORFs can be selected.",
+          "A maximum of 10 genes/ORFs can be highlighted.",
           type = "message")
       }
     }
@@ -1122,8 +1125,6 @@ server <- function(input, output, session) {
       subset(paste(Plate, Position) %in% Positions) |>
       as.data.frame()
 
-    #ac[['Positions']] <- Positions ## NEW
-    #ac[['mat_select']] <- mat_select ## NEW
     return(mat_select)
   })
 
@@ -1252,8 +1253,6 @@ server <- function(input, output, session) {
 
   kinresp_global_state_mat_select <- reactive({
     req(kinresp_global_XY_vars())
-    #req(kinresp_global_state_selected())
-    #req(kinresp_global_normalized_vals())
 
     Value <- "Value"
     if(kinresp_global_normalized_vals() == T){
@@ -1263,7 +1262,6 @@ server <- function(input, output, session) {
     Y <- kinresp_global_XY_vars()[['Y']]
     Positions <-
       kinresp_global_state_selected()
-    cat("Positions: ", paste(Positions, collapse = ", "), "\n")
     mat_select <- data.frame()
     if(length(Positions) > 0){
 
@@ -1292,10 +1290,7 @@ server <- function(input, output, session) {
         mat_select[,Y]
     }
     
-    #cat("Number of rows: ": NROW(mat_select), "\n")
-    
     return(mat_select)
-
 
   })
 

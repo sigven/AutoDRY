@@ -8,6 +8,7 @@
 - [Data Visualization Options](#data_viz_options)
 - [Examples and Use Cases](#examples_use_cases)
 - [Technical details](#technical_details)
+- [Known Issues](#known_issues)
 
 <h3 id="overview">Overview</h3>
 
@@ -132,6 +133,14 @@ Across both analysis types, users can adjust several display settings:
  * **Bayesian Analysis**: Used to quantify the autophagy execution competence based on cell-level latent space evidence of autophagosome formation and clearance.
 
  * **Control Data**: WT, atg1Δ, and vam6Δ mutants serve as baseline controls to benchmark mutant phenotypes.
+
+<br>
+<hr>
+
+<h3 id="known_issues">Known Issues</h3>
+
+ * **Gene/ORF mutants with extreme values**:
+   We have observed that a few gene deletion mutants exhibit extreme values in their autophagy response kinetics or competence scores. Some of these outliers are unfortunately not shown when trying to highlight them in the global views (dot plots). This is due to the way the data is normalized and visualized, which can obscure these extreme values. We are working on improving this aspect of the visualization to ensure that all relevant data points are clearly represented. 
 
 <br>
 <hr>
