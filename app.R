@@ -319,8 +319,9 @@ search_page <-
         bslib::card_body(
           htmltools::div(style = "margin-top: 40px;"),
           htmltools::div(
-            class = "d-flex align-items-center justify-content-center",
-            style = "height: 100%; padding: 2rem;",
+            #class = "d-flex align-items-center justify-content-center",
+            class = "d-flex flex-column align-items-center justify-content-between",
+            style = "min-height: 50vh; height: 100%; padding: 2rem;",
             htmltools::div(
               class = "text-center",
               style = "max-width: 600px; width: 100%;",
@@ -402,34 +403,27 @@ search_page <-
                 "Search for yeast gene/ORF mutant",
                 "", width = "100%"),
               shiny::uiOutput("gene_mutant_suggestions"),
-              # 3. Selectize Input
-              #shiny::selectizeInput(
-              #  "main_gene_search",
-              #  "Query a yeast gene/ORF mutant to explore different views of autophagy dynamics",
-              #  choices = NULL,
-              #  options = list(
-              #    maxOptions = 5500     # Set this to your max or desired number
-              #  ),
-              #  width = "100%"),
 
               # 4. Submit Button
               shiny::actionButton(
                 "submit_btn",
                 "Submit",
                 class = "btn-primary mt-3"),
-              htmltools::div(style = "margin-top: 80px;"),
+              htmltools::div(style = "margin-top: 10px;")
+            ),
+            htmltools::div(style = "flex-grow: 1;"),
+            htmltools::div(
+              shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>."),
+            ),
+            shiny::conditionalPanel(
+              condition = "output.isSafari",
               htmltools::div(
-                style = "max-width: 800px, width: 100%",
-                shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>."),
-                shiny::conditionalPanel(
-                  condition = "output.isSafari",
-                  htmltools::div(
-                    style = "width: 100%, color: red",
-                    shiny::HTML("<br><br><i>WARNING: This website works suboptimally with Safari - please use Chrome/Firefox/Edge/Brave</i>")
-                  )
-                )),
-              htmltools::div(style = "margin-top: 30px;")
-            )
+                class = "text-center",
+                style = "font-color: red; max-width: 900px; width: 100%;",
+                shiny::HTML("<br><br><i style='color:red'>WARNING: Data interaction works suboptimally with the Safari web browser - please consider using Chrome/Firefox/Edge/Brave when visiting AutoDRY</i>")
+              )
+            ),
+            htmltools::div(style = "margin-bottom: 20px;")
           )
         ),
         autodry_footer
@@ -853,6 +847,16 @@ server <- function(input, output, session) {
     paste0("<br><b>Overall autophagy</b><br><br>",
            "<i>log BF (WT:ATG1)</i>")
 
+  ac <- shiny::reactiveValues(
+    'mat' = ac_global_init[['mat']],
+    'mat_select' = ac_global_init[['mat_select']],
+    'X' = ac_global_init[['X']],
+    'Y' = ac_global_init[['Y']],
+    'lab_x' = ac_global_init[['lab_x']],
+    'lab_y' = ac_global_init[['lab_y']],
+    'Positions' = ac_global_init[['Positions']],
+  )
+  
   ac_global_state <- ac_global_init
 
   Value <- "Value"
@@ -922,18 +926,19 @@ server <- function(input, output, session) {
 
   output$kinresp_global_plot <- shiny::renderPlot({
     req(kinresp_global_state_mat())
-    #req(kinresp_global_state_mat_select())
     req(kinresp_global_XY_vars())
     
-    m <- kinresp_global_state_mat_select()
-
+    mat_select <- kinresp_global_state_mat_select()
+    mat <- kinresp_global_state_mat()
+    X <- kinresp_global_XY_vars()[['X']]
+    Y <- kinresp_global_XY_vars()[['Y']]
+                                
     plot_kinetic_response_global(
-      mat = kinresp_global_state_mat(),
-      mat_select = m,
-      X = kinresp_global_XY_vars()[['X']],
-      Y = kinresp_global_XY_vars()[['Y']],
-      show_library_type_contour = FALSE)
-      #show_library_type_contour = input$contour)
+      mat = mat,
+      mat_select = mat_select,
+      X = X,
+      Y = Y,
+      show_library_type_contour = input$contour)
   })
 
   output$acomp_global <- shiny::renderPlot({
@@ -1038,6 +1043,7 @@ server <- function(input, output, session) {
       "</ul></div>")
   })
 
+  #observe ({
   acomp_global_state_vars <- reactive({
     req(input$bf_x_var)
     req(input$bf_y_var)
@@ -1083,7 +1089,9 @@ server <- function(input, output, session) {
 
   })
 
+  #observe ({
   acomp_global_state_selected <- reactive ({
+    #req(input$gene_id_acomp_global) ## NEW
     Positions <- c()
     for(i in input$gene_id_acomp_global){
       BF_response <- gw_autoph_competence_data[['bf_temporal']] |>
@@ -1114,11 +1122,15 @@ server <- function(input, output, session) {
       subset(paste(Plate, Position) %in% Positions) |>
       as.data.frame()
 
+    #ac[['Positions']] <- Positions ## NEW
+    #ac[['mat_select']] <- mat_select ## NEW
     return(mat_select)
   })
 
+  #observe ({
   acomp_global_state_library_adjustment <- reactive({
 
+    #req(input$bf_library_adjustment)
     # Library adjustment for BF data
     req(acomp_global_state_vars())
     ## 1) We standardize the distributions of KO, DAmP and WT populations
@@ -1134,6 +1146,9 @@ server <- function(input, output, session) {
 
     X <- ac_global_state$X
     Y <- ac_global_state$Y
+    #X <- ac[['X']]
+    #Y <- ac[['Y']]
+    #mat <- ac[['mat']]
     mat <- ac_global_state$mat
     if(input$bf_library_adjustment == T){
       mat_lib <- mat[is.na(mat$Plate_controls),] |>
@@ -1189,6 +1204,7 @@ server <- function(input, output, session) {
       mat[,Y] <- mat[,Y] *
         ((mat_lib$sd_y/mat_lib$sd_type_y)[match(mat$Type,mat_lib$Type)])
 
+      #ac[['mat']] <- mat
       ac_global_state$mat <- mat
     }
 
@@ -1236,7 +1252,7 @@ server <- function(input, output, session) {
 
   kinresp_global_state_mat_select <- reactive({
     req(kinresp_global_XY_vars())
-    req(kinresp_global_state_selected())
+    #req(kinresp_global_state_selected())
     #req(kinresp_global_normalized_vals())
 
     Value <- "Value"
@@ -1275,6 +1291,9 @@ server <- function(input, output, session) {
       mat_select$Y <-
         mat_select[,Y]
     }
+    
+    #cat("Number of rows: ": NROW(mat_select), "\n")
+    
     return(mat_select)
 
 

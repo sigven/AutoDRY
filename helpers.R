@@ -436,6 +436,10 @@ plot_kinetic_response_global <- function(
     custom_scale_limits = TRUE,
     show_library_type_contour = FALSE){
   
+  #cat("BALLE\n")
+  #cat(Y,"\n")
+  #cat(X,"\n")
+  #cat(colnames(mat),"\n")
   #mat <- kinresp_state_data[['mat']]
   #mat_select <- kinresp_state_data[['mat_select']]
   
