@@ -106,16 +106,36 @@ autodry_kinresp_ui[['global']] <-
     fill = TRUE,
     sidebar = bslib::sidebar(
       list(
-        shiny::selectizeInput(
-          inputId = "gene_id_kinresp_global",
-          label = "Highlight gene/ORF mutants (max 10)",
-          choices = NULL,
-          multiple = TRUE,
-          selected = "AAC1 / YMR056C",
-          options = list(
-            maxOptions = 5500,     # Set this to your max or desired number
-            minItems = 1,
-            maxItems = 10)),
+        conditionalPanel(
+          condition = "output.isSafari",
+          tagList(
+            shiny::textInput(
+              "search_term_kinresp_global", 
+              "Search gene/ORF mutants:"),
+            shiny::uiOutput("matched_genes_kinresp_global"),
+            shiny::actionButton(
+              "add_gene_kinresp_global", 
+              "Add to selection"),
+            shiny::actionButton(
+              "clear_highlighted_kinresp_global", 
+              "Clear all"),
+            shiny::uiOutput("highlighted_genes_kinresp_global")
+          )
+        ),
+        conditionalPanel(
+          condition = "!output.isSafari",
+          shiny::selectizeInput(
+            inputId = "gene_id_kinresp_global",
+            label = "Highlight gene/ORF mutants (max 10)",
+            selected = "AAC1 / YMR056C",
+            choices = NULL,
+            
+            multiple = TRUE,
+            options = list(
+              maxOptions = 5500,     # Set this to your max or desired number
+              minItems = 1,
+              maxItems = 10))
+        ),
         shiny::selectInput(
           "x_var_kin",
           "X-axis variable",
@@ -146,7 +166,7 @@ autodry_kinresp_ui[['global']] <-
           fill = TRUE,
           fillable = TRUE,
           min_height = "700px",
-          shiny::plotOutput("kinresp_global")
+          shiny::plotOutput("kinresp_global_plot")
         )
       ),
       fill = T
@@ -209,17 +229,36 @@ autodry_competence_ui[['global']] <-
     fill = TRUE,
     sidebar = bslib::sidebar(
       list(
-        shiny::selectizeInput(
-          inputId = "gene_id_acomp_global",
-          label = "Highlight gene/ORF mutants (max 10)",
-          selected = "AAC1 / YMR056C",
-          choices = NULL,
-
-          multiple = TRUE,
-          options = list(
-            maxOptions = 5500,     # Set this to your max or desired number
-            minItems = 1,
-            maxItems = 10)),
+        conditionalPanel(
+          condition = "output.isSafari",
+          tagList(
+            shiny::textInput(
+              "search_term_acomp_global", 
+              "Search gene/ORF mutants:"),
+            shiny::uiOutput("matched_genes_acomp_global"),
+            shiny::actionButton(
+              "add_gene_acomp_global", 
+              "Add to selection"),
+            shiny::actionButton(
+              "clear_highlighted_acomp_global", 
+              "Clear selection"),
+            shiny::uiOutput("highlighted_genes_acomp_global")
+          )
+        ),
+        conditionalPanel(
+          condition = "!output.isSafari",
+          shiny::selectizeInput(
+            inputId = "gene_id_acomp_global",
+            label = "Highlight gene/ORF mutants (max 10)",
+            selected = "AAC1 / YMR056C",
+            choices = NULL,
+            
+            multiple = TRUE,
+            options = list(
+              maxOptions = 5500,     # Set this to your max or desired number
+              minItems = 1,
+              maxItems = 10))
+        ),
         shiny::selectInput(
           "bf_x_var",
           "X-axis variable",
@@ -292,30 +331,34 @@ search_page <-
                 style = "margin-bottom: 30px;"),
 
               # 2. 2x2 Radio Grid
-
-              # shiny::conditionalPanel(
-              #   condition = "!output.isSafari",
-              #   htmltools::div(
-              #     class = "mb-3",
-              #     radioButtons(
-              #       "analysis_view", "",
-              #       choiceNames = c(
-              #         "Kinetic response (single)",
-              #         "Kinetic response (global)",
-              #         "Autophagy competence (single)",
-              #         "Autophagy competence (global)"
-              #       ),
-              #       choiceValues = c(
-              #         "kinresp_single",
-              #         "kinresp_global",
-              #         "acomp_single",
-              #         "acomp_global"
-              #       ),
-              #       selected = "kinresp_global",
-              #       inline = TRUE
-              #     )
-              #   )
-              # ),
+              shiny::conditionalPanel(
+                condition = "output.isSafari",
+                htmltools::div(
+                  class = "mb-3",
+                  fluidRow(
+                    column(
+                      6,
+                      radioButtons(
+                        "analysis_view_safari", "",
+                        choices = c(
+                          "Kinetic response" = "kinresp_single"),
+                        selected = "kinresp_single",
+                        inline = TRUE
+                      )
+                    ),
+                    column(
+                      6,
+                      radioButtons(
+                        "analysis_view_safari", "",
+                        choices = c(
+                          "Autophagy competence" = "acomp_single"),
+                        selected = "kinresp_single",
+                        inline = TRUE
+                      )
+                    )
+                  )
+                )
+              ),
               shiny::conditionalPanel(
                 condition = "!output.isSafari",
                 htmltools::div(
@@ -352,34 +395,7 @@ search_page <-
                   )
                 )
               ),
-              shiny::conditionalPanel(
-                condition = "output.isSafari",
-                htmltools::div(
-                  class = "mb-3",
-                  fluidRow(
-                    column(
-                      6,
-                      radioButtons(
-                        "analysis_view_safari", "",
-                        choices = c(
-                          "Kinetic response" = "kinresp_single"),
-                        selected = "kinresp_single",
-                        inline = TRUE
-                      )
-                    ),
-                    column(
-                      6,
-                      radioButtons(
-                        "analysis_view_safari", "",
-                        choices = c(
-                          "Autophagy competence" = "acomp_single"),
-                        selected = "kinresp_single",
-                        inline = TRUE
-                      )
-                    )
-                  )
-                )
-              ),
+            
 
               shiny::textInput(
                 "gene_search_input",
@@ -404,7 +420,14 @@ search_page <-
               htmltools::div(style = "margin-top: 80px;"),
               htmltools::div(
                 style = "max-width: 800px, width: 100%",
-                shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>.")),
+                shiny::HTML("Citation: Chica et al., bioRxiv (2025). <b>Time-resolved functional genomics using deep learning reveals a global hierarchical control of autophagy</b>. <a name='citation' href='https://www.biorxiv.org/content/10.1101/2024.04.06.588104v2' target='_blank'>doi: 10.1101/2024.04.06.588104</a>."),
+                shiny::conditionalPanel(
+                  condition = "output.isSafari",
+                  htmltools::div(
+                    style = "width: 100%, color: red",
+                    shiny::HTML("<br><br><i>WARNING: This website works suboptimally with Safari - please use Chrome/Firefox/Edge/Brave</i>")
+                  )
+                )),
               htmltools::div(style = "margin-top: 30px;")
             )
           )
@@ -497,7 +520,7 @@ ui_original <-
       bslib::nav_panel(title = "Autophagy competence - global",
                        fill = TRUE,
                        value = "acomp_global_view",
-                      autodry_competence_ui[['global']])
+                       autodry_competence_ui[['global']])
     ),
     bslib::nav_menu(
       title = "Documentation",
@@ -568,8 +591,69 @@ server <- function(input, output, session) {
       width = "100%",
       selectize = F)
   })
+  
+  shiny::observeEvent(input$submit_btn, {
+    selected_gene(input$main_gene_search)
+    
+    # Switch to appropriate nav_panel based on selected analysis view
+    target_panel <- NULL
+    if (input$client_browser != "Safari"){
+      target_panel <- switch(
+        input$analysis_view,
+        "kinresp_single" = "kinresp_single_view",
+        "kinresp_global" = "kinresp_global_view",
+        "acomp_single" = "acomp_single_view",
+        "acomp_global" = "acomp_global_view")
+    }else{
+      target_panel <- switch(
+        input$analysis_view_safari,
+        "kinresp_single" = "kinresp_single_view",
+        "acomp_single" = "acomp_single_view")
+    }
+    
+    cat(input$client_browser, "\t",
+        "Switching to panel:", target_panel, "\n")
+    shiny::updateNavbarPage(
+      inputId = "main_nav",
+      selected = target_panel)
+    
+    # Update the corresponding selectizeInput in the selected panel
+    if (input$client_browser != "Safari"){
+      #cat("Non-Safari\tupdating ", paste0("gene_id_", input$analysis_view), "\n")
+      shiny::updateSelectizeInput(
+        session,
+        paste0("gene_id_", input$analysis_view),
+        selected = input$main_gene_search)
+    }
+    else {
+      shiny::updateTextInput(
+        session,
+        inputId = paste0("gene_search_input_",input$analysis_view_safari),
+        value = input$gene_search_input
+      )
+      
+      shiny::updateSelectInput(
+        session,
+        inputId = paste0("gene_id_", input$analysis_view_safari),
+        choices = input$main_gene_search,
+        selected = input$main_gene_search
+      )
+    }
+    
+  })
+  
+  shiny::observe({
+    if (input$main_nav %in% "kinresp_single_view" ||
+        input$main_nav %in% "kinresp_global_view" ||
+        input$main_nav %in% "acomp_single_view" ||
+        input$main_nav %in% "acomp_global_view") {
+      session$sendCustomMessage(
+        type = "toggleDropdown",
+        message = list(msg = "hide dropdown"))
+    }
+  })
 
-  ### KINETIC RESPONSE SINGLE VIEW UI LOGIC ###
+  #### KINETIC RESPONSE SINGLE VIEW UI LOGIC ####
 
   filtered_genes_kinresp_single <- shiny::reactive({
     req(nchar(input$gene_search_input_kinresp_single) >= 2)
@@ -626,70 +710,111 @@ server <- function(input, output, session) {
       width = "100%",
       selectize = F)
   })
-
-
-  shiny::observeEvent(input$submit_btn, {
-    selected_gene(input$main_gene_search)
-
-    # Switch to appropriate nav_panel based on selected analysis view
-    target_panel <- NULL
-    if (input$client_browser != "Safari"){
-      target_panel <- switch(
-        input$analysis_view,
-        "kinresp_single" = "kinresp_single_view",
-        "kinresp_global" = "kinresp_global_view",
-        "acomp_single" = "acomp_single_view",
-        "acomp_global" = "acomp_global_view")
-    }else{
-      target_panel <- switch(
-        input$analysis_view_safari,
-        "kinresp_single" = "kinresp_single_view",
-        "acomp_single" = "acomp_single_view")
-    }
-
-    cat(input$client_browser, "\t",
-        "Switching to panel:", target_panel, "\n")
-    # Change page programmatically using bslib’s update_navs
-    shiny::updateNavbarPage(
-      inputId = "main_nav",
-      selected = target_panel)
-
-    # Update the corresponding selectizeInput in the selected panel
-    if (input$client_browser != "Safari"){
-      #cat("Non-Safari\tupdating ", paste0("gene_id_", input$analysis_view), "\n")
-      shiny::updateSelectizeInput(
-        session,
-        paste0("gene_id_", input$analysis_view),
-        selected = input$main_gene_search)
-    }
-    else {
-      shiny::updateTextInput(
-        session,
-        inputId = paste0("gene_search_input_",input$analysis_view_safari),
-        value = input$gene_search_input
-      )
-
-      shiny::updateSelectInput(
-        session,
-        inputId = paste0("gene_id_", input$analysis_view_safari),
-        choices = input$main_gene_search,
-        selected = input$main_gene_search
-      )
-    }
-
+  
+  #### KINETIC RESPONSE GLOBAL VIEW UI LOGIC - SAFARI ####
+  
+  selected_genes_kinresp_global <- reactiveVal(character())
+  
+  filtered_choices_kinresp_global <- reactive({
+    req(input$search_term_kinresp_global)
+    matches <- grep(
+      input$search_term_kinresp_global,
+      main_gene_ids$orf_gene_id,
+      value = TRUE,
+      ignore.case = TRUE)
+    head(matches, 80)
   })
-
-  shiny::observe({
-    if (input$main_nav %in% "kinresp_single_view" ||
-        input$main_nav %in% "kinresp_global_view" ||
-        input$main_nav %in% "acomp_single_view" ||
-        input$main_nav %in% "acomp_global_view") {
-      session$sendCustomMessage(
-        type = "toggleDropdown",
-        message = list(msg = "hide dropdown"))
+  
+  output$matched_genes_kinresp_global <- renderUI({
+    if (nchar(input$search_term_kinresp_global) < 2) return(NULL)
+    shiny::selectInput(
+      "match_select_kinresp_global",
+      "Matching gene/ORF mutants:",
+      choices = filtered_choices_kinresp_global(),
+      selectize = FALSE)
+  })
+  
+  observeEvent(input$add_gene_kinresp_global, {
+    current <- selected_genes_kinresp_global()
+    new_item <- input$match_select_kinresp_global
+    if (!is.null(new_item) && !(new_item %in% current)) {
+      selected_genes_kinresp_global(c(current, new_item))
     }
   })
+  
+  output$highlighted_genes_kinresp_global <- renderUI({
+    choices <- selected_genes_kinresp_global()
+    checkboxGroupInput(
+      "gene_id_kinresp_global",
+      "Highlighted gene/ORFs (uncheck to remove):",
+      choices = choices,
+      selected = choices)
+  })
+  
+  observeEvent(input$gene_id_kinresp_global, {
+    selected_genes_kinresp_global(input$gene_id_kinresp_global)
+  })
+  
+  observeEvent(input$clear_highlighted_kinresp_global, {
+    selected_genes_kinresp_global(character())
+  })
 
+  
+  #### AUTOPHAGY COMPETENCE GLOBAL VIEW UI LOGIC - SAFARI ####
+  
+  selected_genes_acomp_global <- reactiveVal(character())
+  
+  filtered_choices_acomp_global <- reactive({
+    req(input$search_term_acomp_global)
+    matches <- grep(
+      input$search_term_acomp_global,
+      main_gene_ids$orf_gene_id,
+      value = TRUE,
+      ignore.case = TRUE)
+    head(matches, 80)
+  })
+  
+  output$matched_genes_acomp_global <- renderUI({
+    if (nchar(input$search_term_acomp_global) < 2) return(NULL)
+    shiny::selectInput(
+      "match_select_acomp_global",
+      "Matching gene/ORF mutants:",
+      choices = filtered_choices_acomp_global(),
+      selectize = FALSE)
+  })
+  
+  observeEvent(input$add_gene_acomp_global, {
+    current <- selected_genes_acomp_global()
+    new_item <- input$match_select_acomp_global
+    if (!is.null(new_item) && !(new_item %in% current)) {
+      if(length(c(current,new_item)) <= 10){
+        selected_genes_acomp_global(c(current, new_item))
+      }
+      else {
+        shiny::showNotification(
+          "Maximum of 10 genes/ORFs can be selected.",
+          type = "message")
+      }
+    }
+  })
+  
+  output$highlighted_genes_acomp_global <- renderUI({
+    choices <- selected_genes_acomp_global()
+    checkboxGroupInput(
+      "gene_id_acomp_global",
+      "Highlighted gene/ORFs (uncheck to remove):",
+      choices = choices,
+      selected = choices)
+  })
+  
+  observeEvent(input$gene_id_acomp_global, {
+    selected_genes_acomp_global(input$gene_id_acomp_global)
+  })
+  
+  observeEvent(input$clear_highlighted_acomp_global, {
+    selected_genes_acomp_global(character())
+  })
+  
   BF_variables <- colnames(
     gw_autoph_competence_data[['bf_overall']])[5:7]
 
@@ -795,17 +920,20 @@ server <- function(input, output, session) {
       response_data = gw_autoph_response_data$per_ko[[input$gene_id_kinresp_single]])
   })
 
-  output$kinresp_global <- shiny::renderPlot({
+  output$kinresp_global_plot <- shiny::renderPlot({
     req(kinresp_global_state_mat())
-    req(kinresp_global_state_mat_select())
+    #req(kinresp_global_state_mat_select())
     req(kinresp_global_XY_vars())
+    
+    m <- kinresp_global_state_mat_select()
 
     plot_kinetic_response_global(
       mat = kinresp_global_state_mat(),
-      mat_select = kinresp_global_state_mat_select(),
+      mat_select = m,
       X = kinresp_global_XY_vars()[['X']],
       Y = kinresp_global_XY_vars()[['Y']],
-      show_library_type_contour = input$contour)
+      show_library_type_contour = FALSE)
+      #show_library_type_contour = input$contour)
   })
 
   output$acomp_global <- shiny::renderPlot({
@@ -1075,7 +1203,7 @@ server <- function(input, output, session) {
   })
 
   kinresp_global_state_selected <- reactive({
-    req(input$gene_id_kinresp_global)
+    #req(input$gene_id_kinresp_global)
     Positions <- c()
     for(i in input$gene_id_kinresp_global){
       y_pred <- gw_autoph_response_data[['ds_curvefits']] |>
@@ -1107,7 +1235,7 @@ server <- function(input, output, session) {
   })
 
   kinresp_global_state_mat_select <- reactive({
-    #req(kinresp_global_XY_vars())
+    req(kinresp_global_XY_vars())
     req(kinresp_global_state_selected())
     #req(kinresp_global_normalized_vals())
 
@@ -1119,6 +1247,7 @@ server <- function(input, output, session) {
     Y <- kinresp_global_XY_vars()[['Y']]
     Positions <-
       kinresp_global_state_selected()
+    cat("Positions: ", paste(Positions, collapse = ", "), "\n")
     mat_select <- data.frame()
     if(length(Positions) > 0){
 
